@@ -1,5 +1,5 @@
 import FinanceDataReader as fdr
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from config import DB_URL
 
 engine = create_engine(DB_URL)
@@ -14,12 +14,30 @@ def sync_krx_stocks():
         'Name': 'name',
         'Market': 'market'
     })
-
-    try:
-        stocks_df.to_sql(name='stocks', con=engine, if_exists='append', index=False)
-        print(f"✅ 총 {len(stocks_df)}개의 대한민국 상장 주식 종목이 DB에 등록되었습니다!")
-    except Exception as e:
-        print(f"❌ DB 저장 중 에러 발생: {e}")
-
+    
+    insert_query = text("""
+                        INSERT IGNORE INTO stocks (ticker, name, market)
+                        VALUES (:ticker, :name, :market)
+                        """)
+    
+    new_count = 0
+    
+    with engine.connect() as conn:
+        for _, row in stocks_df.iterrows():
+            result = conn.execute(insert_query, {
+                'ticker': row['ticker'],
+                'name': row['name'],
+                'market': row['market']
+            })
+            if result.rowcount == 1:
+                new_count += 1
+                
+    total = len(stocks_df)
+    skipped = total - new_count
+    print(f"✅ 처리 완료!")
+    print(f"   → 전체 KRX 종목: {total}개")
+    print(f"   → 신규 추가:     {new_count}개")
+    print(f"   → 이미 존재(스킵): {skipped}개")
+    
 if __name__ == "__main__":
     sync_krx_stocks()

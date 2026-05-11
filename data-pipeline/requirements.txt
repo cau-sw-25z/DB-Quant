@@ -1,5 +1,6 @@
 finance-datareader
 pandas
+numpy
 SQLAlchemy
 PyMySQL
 tabulate

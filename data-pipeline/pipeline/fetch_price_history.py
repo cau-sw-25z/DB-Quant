@@ -7,7 +7,7 @@ from config import DB_URL
 
 engine = create_engine(DB_URL)
 
-def fetch_and_insert_data(start_date="2024-01-01"):
+def fetch_and_insert_data():
     print(f"[{datetime.now()}] 전체 주식 데이터 수집 파이프라인 가동...")
 
     target_stocks_df = pd.read_sql("SELECT id, ticker, name FROM stocks", con=engine)
@@ -21,7 +21,25 @@ def fetch_and_insert_data(start_date="2024-01-01"):
         name = row['name']
 
         try:
-            print(f"[{index + 1}/{total_count}] 데이터 수집 중: {name} ({ticker})")
+            last_date_result = pd.read_sql(
+                f"SELECT MAX(date) AS last_date FROM price_histories WHERE stock_id = {stock_id}",
+                engine
+            )
+            last_date = last_date_result.iloc[0]['last_date']
+            
+            if last_date is None:
+                start_date = "2024-01-01"
+            else:
+                from datetime import timedelta
+                next_date = pd.Timestamp(last_date) + timedelta(days=1)
+                start_date = next_date.strftime('%Y-%m-%d')
+            
+            print(f"[{index+1}/{total_count}] {name}({ticker}) | {start_date} 부터 수집")
+            
+            if start_date > datetime.today().strftime('%Y-%m-%d'):
+                print(f"   → 이미 최신 데이터. 건너뜀.")
+                continue
+            
             df = fdr.DataReader(ticker, start_date)
 
             if df.empty:
@@ -59,6 +77,8 @@ def fetch_and_insert_data(start_date="2024-01-01"):
     if all_data:
         final_df = pd.concat(all_data, ignore_index=True)
         final_df.to_sql('price_histories', con=engine, if_exists='append', index=False)
+
+    print("✅ 증분 업데이트 완료!")
 
 if __name__ == "__main__":
     fetch_and_insert_data()

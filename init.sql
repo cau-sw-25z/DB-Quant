@@ -157,7 +157,31 @@ CREATE TABLE IF NOT EXISTS `quant_db`.`trades` (
     ON UPDATE NO ACTION)
 ENGINE = InnoDB;
 
+-- -----------------------------------------------------
+-- Table `quant_db`.`stock_classification`
+-- DB-06 분류 결과 저장 / DB-09에서 전략 매핑에 사용됨
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS `quant_db`.`stock_classification` (
+  `id`            BIGINT       NOT NULL AUTO_INCREMENT,
+  `stock_id`      BIGINT       NOT NULL,
+  `ticker`        VARCHAR(50)  NOT NULL,
+  `strategy_type` VARCHAR(50)  NOT NULL,  -- TREND_FOLLOWING / MEAN_REVERSION / MOMENTUM / VOLATILITY_BREAKOUT
+  `score`         DECIMAL(5,2) NOT NULL,
+  `classified_at` DATETIME     NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE INDEX `idx_stock_classification` (`stock_id` ASC),
+  CONSTRAINT `fk_classification_stocks`
+    FOREIGN KEY (`stock_id`)
+    REFERENCES `quant_db`.`stocks` (`id`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION)
+ENGINE = InnoDB;
+
+ALTER TABLE stock_metrics 
+ADD UNIQUE INDEX idx_stock_metrics (stock_id, date);
 
 SET SQL_MODE=@OLD_SQL_MODE;
 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS;
 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS;
+
+
