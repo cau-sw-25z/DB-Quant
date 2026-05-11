@@ -1,7 +1,7 @@
 import pandas as pd
 from sqlalchemy import create_engine
+from config import DB_URL
 
-DB_URL = "mysql+pymysql://quant_user:0615@localhost:3306/quant_db?charset=utf8mb4"
 engine = create_engine(DB_URL)
 
 def validate_data():
