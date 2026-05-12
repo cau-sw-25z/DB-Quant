@@ -2,6 +2,9 @@ import pandas as pd
 import numpy as np
 from sqlalchemy import create_engine
 from datetime import datetime
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from config import DB_URL
 
 engine = create_engine(DB_URL)
@@ -27,7 +30,7 @@ def load_and_prepare():
     price_query = """
     SELECT stock_id, date, close_price, high_price, low_price, volume
     FROM price_histories
-    WHERE date >= DATE_SUB(CURDATE(), INTERVAL 90 DAY)
+    WHERE date >= DATE_SUB(CURDATE(), INTERVAL 120 DAY)
     ORDER BY stock_id, date
     """
     price_df = pd.read_sql(price_query, engine)
@@ -58,8 +61,11 @@ def calc_price_features(price_df):
         ma60 = close.rolling(window=60).mean()
         
         # 2. 60일 이평 위에 있는 날 비율
-        above_ma60 = (close > ma60).dropna()
-        above_ma60_ratio = above_ma60.mean() if len(above_ma60) > 0 else 0.5
+        valid_ma60 = ma60.dropna()
+        if len(valid_ma60) > 0:
+            above_ma60_ratio = (close[-len(valid_ma60):] > valid_ma60).mean()
+        else:
+            above_ma60_ratio = 0.5
         
         # 3. 20일 이평 위에 있는 날 비율
         above_ma20 = (close > ma20).dropna()
@@ -94,103 +100,68 @@ def calc_price_features(price_df):
 # 3. 4가지 유형별 점수 계산
 
 class StockScorer:
-    """종목별로 4가지 전략 유형 점수를 계산"""
-    
-    def score_trend_following(self, row, vol_low_threshold):
-        """추세추종형: 장기 이평 위에 오래 있을수록, 방향성 뚜렷할수록 높은 점수"""
-        score = 0.0
-        
-        if row['above_ma60_ratio'] >= 0.6:
-            score += 2.0
-            
-        if row['above_ma20_ratio'] >= 0.5:
-            score += 1.0
-            
-        if pd.notna(row['cum_return_90d']) and row['cum_return_90d'] > 0:
-            score += 1.0
-            
-        if pd.notna(row['annual_volatility']) and row['annual_volatility'] <= vol_low_threshold:
-            score += 5.0
-                    
-        return score
-    
-    def score_mean_reversion(self, row, vol_low_threshold):
-        """평균회귀형: 변동성 낮고 평균 주변을 왔다갔다 할수록 높은 점수"""
-        score = 0.0
-        
-        if pd.notna(row['annual_volatility']) and row['annual_volatility'] <= vol_low_threshold:
-            score += 2.0
-            
-        if row['cross_ma20_freq'] >= 4:
-            score += 1.5
-            
-        if 0.35 <= row['above_ma60_ratio'] <= 0.65:
-            score += 1.0
-        
-        return score
-    
-    def score_momentum(self, row):
-        """모멘텀형: 최근 수익률 높고 거래량 급증이 많을수록 높은 점수"""
-        score = 0.0
-        
-        if pd.notna(row['cum_return_30d']) and row['cum_return_30d'] >= 0.05:
-            score += 2.0
-            
-        if row['volume_spike_freq'] >= 3:
-            score += 1.5
-        
-        if pd.notna(row['cum_return_90d']) and row['cum_return_90d'] > 0:
-            score += 1.0
-            
-        return score
-    
-    def score_volatility_breakout(self, row, vol_high_threshold):
-        """변동성돌파형: 일중 변동폭 크고 급등락 빈번할수록 높은 점수"""
-        score = 0.0
-        
-        if pd.notna(row['annual_volatility']) and row['annual_volatility'] >= vol_high_threshold:
-            score += 2.0
-            
-        if row['atr_ratio'] >= 0.03:
-            score += 1.5
-            
-        if row['cross_ma20_freq'] >= 6:
-            score += 1.0
-            
-        return score
-    
-    def calculate_all_scores(self, df):
-        """전체 종목에 대해 4가지 점수를 한 번에 계산"""
-        vol_series = df['annual_volatility'].dropna()
-        vol_low = vol_series.quantile(0.33)
-        vol_high = vol_series.quantile(0.67)
-        
-        print(f"   → 변동성 기준값: 낮음={vol_low:.4f}, 높음={vol_high:.4f}")
-        df['score_trend']     = df.apply(lambda r: self.score_trend_following(r, vol_low), axis=1)
-        df['score_mean_rev']  = df.apply(lambda r: self.score_mean_reversion(r, vol_low), axis=1)
-        df['score_momentum']  = df.apply(lambda r: self.score_momentum(r), axis=1)
-        df['score_vol_break'] = df.apply(lambda r: self.score_volatility_breakout(r, vol_high), axis=1)
-        
+    """
+    순차 규칙 기반 분류 (스코어링 X)
+    우선순위: 변동성돌파형 → 모멘텀형 → 추세추종형 → 평균회귀형
+    가장 강한 특징을 가진 유형으로 먼저 분류하고, 해당 안되면 다음으로 넘어감
+    """
+    def classify_one(self, row):
+
+        vol   = row['annual_volatility'] if pd.notna(row['annual_volatility']) else 0
+        atr   = row['atr_ratio']
+        ret30 = row['cum_return_30d'] if pd.notna(row['cum_return_30d']) else 0
+        ret90 = row['cum_return_90d'] if pd.notna(row['cum_return_90d']) else 0
+        spike = row['volume_spike_freq']
+        ma60  = row['above_ma60_ratio']
+        cross = row['cross_ma20_freq']
+
+        # 1순위: 변동성돌파형
+        if vol >= 1.5 or atr >= 0.07:
+            score = vol + atr * 10
+            return 'VOLATILITY_BREAKOUT', round(score, 2)
+
+        # 2순위: 모멘텀형
+        if ret30 >= 0.10 and spike >= 2:
+            score = ret30 * 10 + spike
+            return 'MOMENTUM', round(score, 2)
+
+        # 3순위: 추세추종형
+        if ma60 >= 0.60 and ret90 > 0:
+            score = ma60 * 10 + ret90 * 5
+            return 'TREND_FOLLOWING', round(score, 2)
+
+        # 4순위: 평균회귀형 - 변동성 낮고 이평 교차 빈번한 종목만
+        if vol <= 0.30 and cross >= 2:
+            score = cross + (1 - vol) * 5
+            return 'MEAN_REVERSION', round(score, 2)
+
+        # 위 조건 모두 해당 안되면 미분류
+        return 'UNCLASSIFIED', 0.0
+
+    def calculate_all_scores(self, df: pd.DataFrame) -> pd.DataFrame:
+        """전체 종목 분류"""
+        results = df.apply(self.classify_one, axis=1)
+
+        df['strategy_type'] = results.apply(lambda x: x[0])
+        df['score']         = results.apply(lambda x: x[1])
+
+        # 기존 코드와 호환되도록 점수 컬럼도 유지
+        df['score_trend']     = (df['strategy_type'] == 'TREND_FOLLOWING').astype(int)
+        df['score_mean_rev']  = (df['strategy_type'] == 'MEAN_REVERSION').astype(int)
+        df['score_momentum']  = (df['strategy_type'] == 'MOMENTUM').astype(int)
+        df['score_vol_break'] = (df['strategy_type'] == 'VOLATILITY_BREAKOUT').astype(int)
+
         return df
     
 # 4. 최고 점수 유형 확정 + DB 저장
-def classify_and_save(df):
+def classify_and_save(df: pd.DataFrame):
     print("💾 [3/4] 최종 분류 후 stock_classification 테이블 저장 중...")
-    
-    SCORE_TO_TYPE = {
-        'score_trend': 'TREND_FOLLOWING', # 추세추종형
-        'score_mean_rev': 'MEAN_REVERSION', # 평균회귀형
-        'score_momentum': 'MOMENTUM', # 모멘텀형
-        'score_vol_break': 'VOLATILITY_BREAKOUT' # 변동성돌파형
-    }
-    score_cols = list(SCORE_TO_TYPE.keys())
-    
-    df['strategy_type'] = df[score_cols].idxmax(axis=1).map(SCORE_TO_TYPE)
-    df['score'] = df[score_cols].max(axis=1)
+
+    # strategy_type, score가 이미 calculate_all_scores에서 채워져 있음
     df['classified_at'] = datetime.now()
-    
+
     result_df = df[['stock_id', 'ticker', 'strategy_type', 'score', 'classified_at']]
-    
+
     result_df.to_sql(
         name='stock_classification',
         con=engine,
@@ -207,18 +178,28 @@ def print_summary(df):
     counts = df['strategy_type'].value_counts()
     for strategy, count in counts.items():
         ratio = count / len(df) * 100
-        bar = '█' * int(ratio / 3)
+        bar   = '█' * int(ratio / 3)
         print(f"  {strategy:<25} {count:>5}개  {ratio:>5.1f}%  {bar}")
     print(f"  {'합계':<25} {len(df):>5}개")
     print("=" * 55)
-    
-    max_ratio = counts.max() / len(df) * 100
-    if max_ratio > 40:
-        top_type = counts.idxmax()
-        print(f"\n⚠️  '{top_type}' 유형이 {max_ratio:.1f}%로 편중되어 있어!")
-        print("   → 스코어링 기준값(임계값) 조정을 고려해봐.")
-    else:
-        print("\n✅ 유형 분포가 균형적이야! 기준값 OK.")
+
+    # ✅ UNCLASSIFIED 제외하고 편중 여부 판단
+    classified = counts.drop('UNCLASSIFIED', errors='ignore')
+    unclassified_cnt = counts.get('UNCLASSIFIED', 0)
+    unclassified_ratio = unclassified_cnt / len(df) * 100
+
+    # 미분류 비율 경고
+    if unclassified_ratio > 20:
+        print(f"\n⚠️  미분류 종목이 {unclassified_ratio:.1f}%야. 새 전략 추가를 고려해봐.")
+
+    # 분류된 종목 중 편중 여부
+    if len(classified) > 0:
+        max_ratio = classified.max() / len(df) * 100
+        if max_ratio > 40:
+            top_type = classified.idxmax()
+            print(f"\n⚠️  '{top_type}' 유형이 {max_ratio:.1f}%로 편중되어 있어!")
+        else:
+            print("\n✅ 유형 분포가 균형적이야!")
         
 def main():
     print(f"🚀 종목 전략 유형 분류 시작 [{datetime.now().strftime('%Y-%m-%d %H:%M')}]\n")

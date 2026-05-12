@@ -1,6 +1,9 @@
 import pandas as pd
 import numpy as np
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from config import DB_URL
 
 engine = create_engine(DB_URL)
@@ -19,24 +22,24 @@ def calculate_metrics():
     
     if last_date is None:
         print("   → stock_metrics 없음. 전체 계산 시작...")
-        query = """
+        query = text("""
         SELECT p.stock_id, s.ticker, s.name, p.date, p.close_price
         FROM price_histories p
         JOIN stocks s ON p.stock_id = s.id
         ORDER BY p.stock_id, p.date
-        """
+        """)
         new_start_date = None
     else:
-        last_date_str = pd.Timestamp(last_date).strftime('%Y-%m-%d')
+        last_date_str = str(last_date)[:10]
         print(f"   → 마지막 계산일: {last_date_str}. 증분 업데이트 시작...")
         
-        query = f"""
+        query = text(f"""
         SELECT p.stock_id, s.ticker, s.name, p.date, p.close_price
-        FROM rice_histories p
+        FROM price_histories p
         JOIN stocks s ON p.stock_id = s.id
         WHERE p.date >= DATE_SUB('{last_date_str}', INTERVAL 380 DAY)
         ORDER BY p.stock_id, p.date
-        """
+        """)
         new_start_date = last_date_str
         
     df = pd.read_sql(query, engine)

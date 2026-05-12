@@ -7,6 +7,9 @@ import pandas as pd
 from sqlalchemy import create_engine, text
 from config import DB_URL
 from datetime import datetime
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 engine = create_engine(DB_URL)
 

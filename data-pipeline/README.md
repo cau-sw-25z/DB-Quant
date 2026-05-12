@@ -32,7 +32,7 @@ pip install -r requirements.txt
 
 **3. DB 연결 설정**
 
-각 스크립트 상단의 `DB_URL`을 본인 비밀번호로 수정해주세요.
+config.py파일의 `DB_URL`을 본인 비밀번호로 수정해주세요.
 
 ```python
 DB_URL = "mysql+pymysql://quant_user:본인비밀번호@localhost:3306/quant_db?charset=utf8mb4"
