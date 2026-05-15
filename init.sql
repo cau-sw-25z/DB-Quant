@@ -177,6 +177,34 @@ CREATE TABLE IF NOT EXISTS `quant_db`.`stock_classification` (
     ON UPDATE NO ACTION)
 ENGINE = InnoDB;
 
+-- technical_indicators 테이블 (DB-10 매매 시그널에서 직접 조회)
+CREATE TABLE IF NOT EXISTS `quant_db`.`technical_indicators` (
+  `id`             BIGINT       NOT NULL AUTO_INCREMENT,
+  `stock_id`       BIGINT       NOT NULL,
+  `ticker`         VARCHAR(50)  NOT NULL,
+  `date`           DATE         NOT NULL,
+  `ma_5`           DOUBLE,
+  `ma_20`          DOUBLE,
+  `ma_60`          DOUBLE,
+  `ma_120`         DOUBLE,
+  `rsi_14`         DOUBLE,
+  `rsi_overbought` TINYINT(1),
+  `rsi_oversold`   TINYINT(1),
+  `macd`           DOUBLE,
+  `macd_signal`    DOUBLE,
+  `macd_hist`      DOUBLE,
+  `bb_upper`       DOUBLE,
+  `bb_mid`         DOUBLE,
+  `bb_lower`       DOUBLE,
+  `bb_width`       DOUBLE,
+  `bb_pct_b`       DOUBLE,
+  PRIMARY KEY (`id`),
+  UNIQUE INDEX `idx_technical_indicators` (`stock_id` ASC, `date` ASC),
+  CONSTRAINT `fk_technical_indicators_stocks`
+    FOREIGN KEY (`stock_id`)
+    REFERENCES `quant_db`.`stocks` (`id`)
+) ENGINE = InnoDB;
+
 ALTER TABLE stock_metrics 
 ADD UNIQUE INDEX idx_stock_metrics (stock_id, date);
 
