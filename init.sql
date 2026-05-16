@@ -158,6 +158,30 @@ CREATE TABLE IF NOT EXISTS `quant_db`.`trades` (
 ENGINE = InnoDB;
 
 -- -----------------------------------------------------
+-- Table `quant_db`.`stock_metrics`
+-- calculate_returns.py 결과 저장
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS `quant_db`.`stock_metrics` (
+  `id`                BIGINT       NOT NULL AUTO_INCREMENT,
+  `stock_id`          BIGINT       NOT NULL,
+  `ticker`            VARCHAR(50)  NOT NULL,
+  `date`              DATE         NOT NULL,
+  `daily_return`      DOUBLE,
+  `cum_return_30d`    DOUBLE,
+  `cum_return_90d`    DOUBLE,
+  `cum_return_1y`     DOUBLE,
+  `annual_volatility` DOUBLE,
+  `sharpe_ratio`      DOUBLE,
+  PRIMARY KEY (`id`),
+  UNIQUE INDEX `idx_stock_metrics` (`stock_id` ASC, `date` ASC),
+  CONSTRAINT `fk_stock_metrics_stocks`
+    FOREIGN KEY (`stock_id`)
+    REFERENCES `quant_db`.`stocks` (`id`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION)
+ENGINE = InnoDB;
+
+-- -----------------------------------------------------
 -- Table `quant_db`.`stock_classification`
 -- DB-06 분류 결과 저장 / DB-09에서 전략 매핑에 사용됨
 -- -----------------------------------------------------
