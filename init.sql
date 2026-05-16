@@ -229,11 +229,6 @@ CREATE TABLE IF NOT EXISTS `quant_db`.`technical_indicators` (
     REFERENCES `quant_db`.`stocks` (`id`)
 ) ENGINE = InnoDB;
 
-ALTER TABLE stock_metrics 
-ADD UNIQUE INDEX idx_stock_metrics (stock_id, date);
-
 SET SQL_MODE=@OLD_SQL_MODE;
 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS;
 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS;
-
-
