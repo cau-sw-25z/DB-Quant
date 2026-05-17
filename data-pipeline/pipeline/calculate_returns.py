@@ -95,7 +95,14 @@ def calculate_metrics():
 
     print("💾 [3/4] 계산 결과를 stock_metrics 테이블에 저장 중...")
     # DB 적재
-    result_df.to_sql(name='stock_metrics', con=engine, if_exists=save_mode, index=False)
+    chunk_size = 50000
+    total = len(result_df)
+    print(f"💾 총 {total}행을 {chunk_size}행씩 나눠서 저장 중...")
+    for i in range(0, total, chunk_size):
+        chunk = result_df.iloc[i:i+chunk_size]
+        chunk.to_sql(name='stock_metrics', con=engine, if_exists=save_mode, index=False)
+        save_mode = 'append'
+        print(f"   → {min(i+chunk_size, total):,}/{total:,}행 저장 완료... ({min(i+chunk_size, total)*100//total}%)")
     print("✅ 적재 완료!\n")
 
 
