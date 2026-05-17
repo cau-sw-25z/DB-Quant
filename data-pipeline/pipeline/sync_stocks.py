@@ -25,7 +25,7 @@ def sync_krx_stocks():
     
     new_count = 0
     
-    with engine.connect() as conn:
+    with engine.begin() as conn:
         for _, row in stocks_df.iterrows():
             result = conn.execute(insert_query, {
                 'ticker': row['ticker'],
