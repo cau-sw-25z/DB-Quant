@@ -174,7 +174,7 @@ class DailyScreener:
                 if math.isclose(yesterday_signal, 1.0):
                     return None
                 if daily_return >= 0.295:
-                    return{**base, "action": "상한가 도달 (매수 보류)"}
+                    return {**base, "action": "상한가 도달 (매수 보류)"}
                 return {**base, "action": "신규 매수 진입"}
 
         except Exception as e:

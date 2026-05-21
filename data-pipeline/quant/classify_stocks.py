@@ -95,7 +95,7 @@ def calc_price_features(price_df):
     
     return pd.DataFrame(results)
 
-# 3. 4가지 유형별 점수 계산
+# 3. 5가지 유형별 점수 계산
 
 class StockScorer:
     """
