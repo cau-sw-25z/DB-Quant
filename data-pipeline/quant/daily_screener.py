@@ -1,5 +1,3 @@
-import json
-import FinanceDataReader as fdr
 import pandas as pd
 from datetime import datetime, timedelta
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -7,7 +5,6 @@ import warnings
 from sqlalchemy import create_engine, text
 import math
 from tqdm import tqdm
-import time
 import sys, os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from config import DB_URL
@@ -57,7 +54,7 @@ class DailyScreener:
                                 JOIN portfolios p ON pi.portfolio_id = p.id
                                 JOIN stocks s ON pi.stock_id = s.id
                                 JOIN stock_classification sc ON sc.stock_id = s.id
-                                WHERE p.quantity > 0
+                                WHERE pi.quantity > 0
                                 """)
             with engine.connect() as conn:
                 holding_df = pd.read_sql(holding_query, conn)
@@ -135,7 +132,7 @@ class DailyScreener:
                     return None
                 action_type = "BUY_CHECK"
                 
-            strategy = self.factory.get_strategy(strategy_type, df)
+            strategy = self.factory.get_strategy_by_name(strategy_type, df)
             if strategy is None:
                 return None
 
@@ -163,13 +160,13 @@ class DailyScreener:
             
             # [매도]
             if action_type == "SELL_CHECK" and current_signal < 0:
-                action_msg = "전량 매도 청산 🔵"
+                action_msg = "전량 매도 청산"
                 if math.isclose(current_signal, -0.5):
-                    action_msg = "50% 부분 익절 🔵"
+                    action_msg = "50% 부분 익절"
                 elif math.isclose(current_signal, -1.5):
-                    action_msg = "과열 익절 청산 🔵"
+                    action_msg = "과열 익절 청산"
                 elif math.isclose(current_signal, -2.0):
-                    action_msg = "긴급 손절 ⚫"
+                    action_msg = "긴급 손절"
                 return {**base, "action": action_msg}
 
             # [결과 2] 매수 시그널 발생
@@ -178,7 +175,7 @@ class DailyScreener:
                     return None
                 if daily_return >= 0.295:
                     return{**base, "action": "상한가 도달 (매수 보류)"}
-                return {**base, "action": "신규 매수 진입 🔴"}
+                return {**base, "action": "신규 매수 진입"}
 
         except Exception as e:
             print(f"[{ticker}] 분석 에러: {e}")

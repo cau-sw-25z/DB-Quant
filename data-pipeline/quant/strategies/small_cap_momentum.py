@@ -46,7 +46,7 @@ class SmallCapMomentumStrategy(BaseStrategy):
         # 1) 5일선 붕괴
         self.df.loc[self.df['close_price'] < self.df['MA_Fast'], 'Signal'] = -1.0
         # 2) 이격도 과열
-        self.df.loc[self.df['close_price'] > self.df['Dynamic_Target'], 'Signal'] = -1.0
+        self.df.loc[self.df['close_price'] > self.df['Dynamic_Target'], 'Signal'] = -1.5
         # 3) 고점 대비 거래량 폭발 음봉
         cond_dump = (
             (self.df['close_price'] < self.df['open_price']) &
