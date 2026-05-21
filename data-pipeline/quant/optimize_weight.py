@@ -4,12 +4,11 @@
 """
 
 import pandas as pd
-from sqlalchemy import create_engine, text
-from config import DB_URL
+from sqlalchemy import create_engine
 from datetime import datetime
-import sys
-import os
+import sys, os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from config import DB_URL
 
 engine = create_engine(DB_URL)
 

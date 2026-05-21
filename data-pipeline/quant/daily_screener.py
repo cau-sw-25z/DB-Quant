@@ -56,7 +56,7 @@ class DailyScreener:
                                 FROM portfolios p
                                 JOIN stocks s ON p.stock_id = s.id
                                 JOIN stock_classification sc ON sc.stock_id = s.id
-                                WHERE p.is_active = 1
+                                WHERE p.quantity > 0
                                 """)
             with engine.connect() as conn:
                 holding_df = pd.read_sql(holding_query, conn)
