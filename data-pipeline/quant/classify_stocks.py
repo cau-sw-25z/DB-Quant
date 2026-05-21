@@ -100,7 +100,7 @@ def calc_price_features(price_df):
 class StockScorer:
     """
     순차 규칙 기반 분류 (스코어링 X)
-    우선순위: 변동성돌파형 → 모멘텀형 → 추세추종형 → 평균회귀형
+    우선순위: 변동성돌파형 → 모멘텀형 → 추세추종형 → LOW_VOLATILITY → 평균회귀형
     가장 강한 특징을 가진 유형으로 먼저 분류하고, 해당 안되면 다음으로 넘어감
     """
     def classify_one(self, row):

@@ -189,7 +189,7 @@ CREATE TABLE IF NOT EXISTS `quant_db`.`stock_classification` (
   `id`            BIGINT       NOT NULL AUTO_INCREMENT,
   `stock_id`      BIGINT       NOT NULL,
   `ticker`        VARCHAR(50)  NOT NULL,
-  `strategy_type` VARCHAR(50)  NOT NULL,  -- TREND_FOLLOWING / MEAN_REVERSION / MOMENTUM / VOLATILITY_BREAKOUT
+  `strategy_type` VARCHAR(50)  NOT NULL,  -- TREND_FOLLOWING / MEAN_REVERSION / MOMENTUM / VOLATILITY_BREAKOUT / LOW_VOLATILITY
   `score`         DECIMAL(5,2) NOT NULL,
   `classified_at` DATETIME     NOT NULL,
   PRIMARY KEY (`id`),
@@ -258,6 +258,26 @@ CREATE TABLE IF NOT EXISTS `quant_db`.`trading_signals` (
   CONSTRAINT `fk_trading_signals_stocks`
     FOREIGN KEY (`stock_id`)
     REFERENCES `quant_db`.`stocks` (`id`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION
+) ENGINE = InnoDB;
+
+-- -----------------------------------------------------
+-- Table `quant_db`.`portfolio_weights`
+-- optimize_weight.py의 save_portfolio_weights() 결과 저장
+-- portfolio_items FK로 종목 정보를 역참조 (ticker 중복 저장 없음)
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS `quant_db`.`portfolio_weights` (
+  `id`                  BIGINT        NOT NULL AUTO_INCREMENT,
+  `portfolio_item_id`   BIGINT        NOT NULL,
+  `weight`              DECIMAL(10,6) NOT NULL,  -- 비중, 합계 = 1.0  예: 0.333333
+  `risk_level`          INT           NOT NULL,  -- 투자 성향 1(안정형) ~ 5(공격형)
+  `calculated_at`       DATETIME      NOT NULL,
+  PRIMARY KEY (`id`),
+  INDEX `idx_portfolio_weights_item` (`portfolio_item_id` ASC),
+  CONSTRAINT `fk_portfolio_weights_items`
+    FOREIGN KEY (`portfolio_item_id`)
+    REFERENCES `quant_db`.`portfolio_items` (`id`)
     ON DELETE NO ACTION
     ON UPDATE NO ACTION
 ) ENGINE = InnoDB;

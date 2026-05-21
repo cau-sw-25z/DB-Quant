@@ -111,17 +111,34 @@ def optimize_weights(tickers, risk_level):
 # DB 저장
 
 def save_portfolio_weights(portfolio_id, result):
-     """portfolio_weights 테이블에 결과 저장"""
-     rows = [
-         {
-             "portfolio_id": portfolio_id,
-             "ticker": ticker,
-             "weight": round(weight, 6),
-             "risk_level": result.risk_level,
-             "calculated_at": datetime.now()
-         }
-         for ticker, weight in result.weights.items()
-     ]
-     df = pd.DataFrame(rows)
-     df.to_sql("portfolio_weights", con=engine, if_exists="append", index=False)
-     print(f"✅ portfolio_id={portfolio_id} 저장 완료 ({len(rows)}건)")
+    """portfolio_weights 테이블에 결과 저장"""
+    ticker_list = ", ".join(f"'{t}'" for t in result.weights.keys())
+    query = f"""
+        SELECT pi.id AS item_id, s.ticker
+        FROM portfolio_items pi
+        JOIN stocks s ON pi.stock_id = s.id
+        WHERE pi.portfolio_id = {portfolio_id}
+        AND s.ticker IN ({ticker_list})
+    """
+    item_df = pd.read_sql(query, engine)
+    item_map = dict(zip(item_df['ticker'], item_df['item_id']))
+    
+    rows = []
+    for ticker, weight in result.weights.items():
+        item_id = item_map.get(ticker)
+        if item_id is None:
+            print(f"⚠️ portfolio_items에 {ticker} 없음 - 스킵")
+            continue
+        rows.append({
+            "portfolio_item_id": item_id,
+            "weight":            round(weight, 6),
+            "risk_level":        result.risk_level,
+            "calculated_at":     datetime.now(),
+        })
+    
+    if not rows:
+        print("❌ 저장할 비중 데이터 없음")
+        return
+    df = pd.DataFrame(rows)
+    df.to_sql("portfolio_weights", con=engine, if_exists="append", index=False)
+    print(f"✅ portfolio_id={portfolio_id} 저장 완료 ({len(rows)}건)")

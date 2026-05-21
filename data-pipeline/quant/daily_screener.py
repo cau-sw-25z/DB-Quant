@@ -36,7 +36,7 @@ class DailyScreener:
         universe_query = text("""
                     SELECT s.ticker, s.name, sc.strategy_type
                     FROM stocks s
-                    JOIN stock_classification sc on.stock_id = s.id
+                    JOIN stock_classification sc on sc.stock_id = s.id
                     WHERE sc.strategy_type NOT IN ('UNCLASSIFIED', 'VOLATILITY_BREAKOUT')
                     """)
         with engine.connect() as conn:
@@ -53,8 +53,9 @@ class DailyScreener:
         try:
             holding_query = text("""
                                 SELECT s.ticker, sc.strategy_type
-                                FROM portfolios p
-                                JOIN stocks s ON p.stock_id = s.id
+                                FROM portfolio_items pi
+                                JOIN portfolios p ON pi.portfolio_id = p.id
+                                JOIN stocks s ON pi.stock_id = s.id
                                 JOIN stock_classification sc ON sc.stock_id = s.id
                                 WHERE p.quantity > 0
                                 """)
