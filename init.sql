@@ -229,6 +229,39 @@ CREATE TABLE IF NOT EXISTS `quant_db`.`technical_indicators` (
     REFERENCES `quant_db`.`stocks` (`id`)
 ) ENGINE = InnoDB;
 
+-- =====================================================
+-- trading_signals 테이블
+-- daily_screener.py 실행 결과 저장
+-- BE 팀이 이 테이블을 읽어서 프론트에 시그널 정보를 내려줌
+-- =====================================================
+CREATE TABLE IF NOT EXISTS `quant_db`.`trading_signals` (
+  `id`            BIGINT        NOT NULL AUTO_INCREMENT,
+  `stock_id`      BIGINT        NOT NULL,
+  `ticker`        VARCHAR(50)   NOT NULL,
+  `strategy_type` VARCHAR(50)   NOT NULL,
+  `action`        VARCHAR(50)   NOT NULL,
+  -- action 가능한 값:
+  --   '신규 매수 진입'
+  --   '상한가 도달 (매수 보류)'
+  --   '전량 매도 청산'
+  --   '50% 부분 익절'
+  --   '과열 익절 청산'
+  --   '긴급 손절'
+  `signal_value`  DOUBLE        NOT NULL,
+  -- signal_value 가능한 값: 1.0 / -0.5 / -1.0 / -1.5 / -2.0
+  `close_price`   DECIMAL(15,2) NOT NULL,
+  `signal_date`   DATE          NOT NULL,
+  `created_at`    DATETIME      NOT NULL,
+  PRIMARY KEY (`id`),
+  INDEX `idx_trading_signals_date` (`signal_date` ASC),
+  INDEX `idx_trading_signals_ticker` (`ticker` ASC),
+  CONSTRAINT `fk_trading_signals_stocks`
+    FOREIGN KEY (`stock_id`)
+    REFERENCES `quant_db`.`stocks` (`id`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION
+) ENGINE = InnoDB;
+
 SET SQL_MODE=@OLD_SQL_MODE;
 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS;
 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS;

@@ -56,7 +56,9 @@ docker ps  # quant_mysql 컨테이너가 보이면 OK
 | `sync_stocks.py` | KRX 전체 종목 목록 동기화 | 주 1회 (신규 상장 대응) |
 | `fetch_price_history.py` | 종목별 일봉 주가 수집 | 매일 (장 마감 후) |
 | `calculate_returns.py` | 수익률 / 변동성 / 샤프지수 계산 | 매일 (fetch 실행 후) |
-| `classify_stock.py` | 4가지 전략 유형 분류 | 필요시 (주 1회 권장) |
+| `calculate_indicators.py` | 기술지표 계산 (MA / RSI / MACD / 볼린저밴드) | 매일 (returns 실행 후) |
+| `classify_stocks.py` | 5가지 전략 유형 분류 | 필요시 (주 1회 권장) |
+| `daily_screener.py` | 전 종목 매수/매도 시그널 생성 | 매일 (indicators 실행 후) |
 | `validate_data.py` | 데이터 정합성 검증 | 필요시 (이상 징후 확인) |
 
 ---
@@ -69,16 +71,18 @@ docker ps  # quant_mysql 컨테이너가 보이면 OK
 
 ```
 1. sync_stocks.py          → stocks 테이블 채우기
-2. fetch_price_history.py  → price_histories 테이블 채우기  (10분 이상 소요)
-3. calculate_returns.py    → stock_metrics 테이블 채우기    (30초 이상 소요)
-4. classify_stock.py       → stock_classification 테이블 채우기
+2. fetch_price_history.py  → price_histories 테이블 채우기       (10분 이상 소요)
+3. calculate_returns.py    → stock_metrics 테이블 채우기         (30초 이상 소요)
+4. calculate_indicators.py → technical_indicators 테이블 채우기  (수 분 소요)
+5. classify_stocks.py      → stock_classification 테이블 채우기
 ```
 
 ```bash
 py sync_stocks.py
 py fetch_price_history.py
 py calculate_returns.py
-py classify_stock.py
+py calculate_indicators.py
+py classify_stocks.py
 ```
 
 ---
@@ -91,14 +95,18 @@ py classify_stock.py
 ```
 1. fetch_price_history.py  → 새 날짜 주가만 추가
 2. calculate_returns.py    → 새 날짜 지표만 계산 후 추가
+3. calculate_indicators.py → 새 날짜 기술지표만 추가
+4. daily_screener.py       → 매수/매도 시그널 생성 후 trading_signals 저장
 ```
 
 ```bash
 py fetch_price_history.py
 py calculate_returns.py
+py calculate_indicators.py
+py daily_screener.py
 ```
 
-> 💡 `sync_stocks.py`는 매일 실행할 필요는 없어요. 신규 상장 종목이 생겼을 때만 실행하면 됩니다.
+> 💡 `sync_stocks.py`와 `classify_stocks.py`는 매일 실행할 필요는 없어요. 신규 상장 종목이 생겼거나 전략 분류 기준을 바꿨을 때만 실행하면 됩니다.
 
 ---
 
@@ -110,12 +118,14 @@ py calculate_returns.py
 1. sync_stocks.py          → 신규 상장 종목만 추가 (기존 종목 스킵)
 2. fetch_price_history.py  → 신규 종목의 과거 데이터 수집
 3. calculate_returns.py    → 신규 종목 지표 계산
+4. calculate_indicators.py → 신규 종목 기술지표 계산
 ```
 
 ```bash
 py sync_stocks.py
 py fetch_price_history.py
 py calculate_returns.py
+py calculate_indicators.py
 ```
 
 ---
@@ -126,7 +136,7 @@ py calculate_returns.py
 `stock_classification` 테이블 전체를 덮어씁니다.
 
 ```bash
-py classify_stock.py
+py classify_stocks.py
 ```
 
 ---
@@ -163,9 +173,16 @@ py classify_stock.py
 - 이미 계산된 날짜 이후분만 계산하여 `stock_metrics`에 **append**
 - rolling(252) 계산을 위해 내부적으로 앞 380일치를 버퍼로 읽지만, 저장은 새 날짜 행만 함
 
-### classify_stock.py
+### calculate_indicators.py
 
-- `stock_metrics` + `price_histories`를 조합해 4가지 전략 유형으로 분류
+- `price_histories`를 읽어 MA / RSI / MACD / 볼린저밴드를 계산
+- 결과를 `technical_indicators` 테이블에 저장
+- `run_full_batch()`: 최초 실행 시 전 종목 전 기간 계산
+- `run_daily_batch()`: 매일 당일 날짜 데이터만 계산해서 추가
+
+### classify_stocks.py
+
+- `stock_metrics` + `price_histories`를 조합해 5가지 전략 유형으로 분류
 - 실행할 때마다 `stock_classification` 전체를 새로 덮어씀
 - 실행 후 유형별 분포 출력 (편중 여부 확인용)
 
@@ -174,8 +191,24 @@ py classify_stock.py
 TREND_FOLLOWING           712개   25.1%  ████████
 MEAN_REVERSION            689개   24.3%  ████████
 MOMENTUM                  748개   26.4%  ████████
-VOLATILITY_BREAKOUT       687개   24.2%  ████████
+LOW_VOLATILITY            312개   11.0%  ███
+VOLATILITY_BREAKOUT       375개   13.2%  ████
 합계                     2836개
+```
+
+> 💡 `VOLATILITY_BREAKOUT` 종목은 분류는 되지만 `daily_screener.py` 스캔 대상에서 제외됩니다. 하루 7% 이상 움직이는 테마주/급등락 소형주로 리스크가 과다하기 때문이에요.
+
+### daily_screener.py
+
+- `stock_classification`에서 투자 가능 종목을 로드 (`UNCLASSIFIED`, `VOLATILITY_BREAKOUT` 제외)
+- 전 종목을 멀티스레드로 스캔해서 매수/매도 시그널을 생성
+- 결과를 `trading_signals` 테이블에 저장 (BE 팀이 이 테이블을 읽어 API로 내려줌)
+
+```
+총 2149개 종목 스캔 시작 (스레드: 10개)
+스캔 진행률: 100%|████████████████| 2149/2149
+전 종목 스캔 완료! 액션 종목: 37개
+trading_signals 테이블에 37건 저장 완료.
 ```
 
 ### validate_data.py
@@ -216,13 +249,40 @@ stock_metrics
 ├── annual_volatility DOUBLE
 └── sharpe_ratio     DOUBLE
 
+technical_indicators
+├── stock_id       BIGINT FK → stocks.id
+├── ticker         VARCHAR(50)
+├── date           DATE
+├── ma_5 / ma_20 / ma_60 / ma_120   DOUBLE
+├── rsi_14         DOUBLE
+├── rsi_overbought TINYINT(1)
+├── rsi_oversold   TINYINT(1)
+├── macd / macd_signal / macd_hist  DOUBLE
+└── bb_upper / bb_mid / bb_lower / bb_width / bb_pct_b  DOUBLE
+
 stock_classification
 ├── id             BIGINT PK
 ├── stock_id       BIGINT FK → stocks.id
 ├── ticker         VARCHAR(50)
-├── strategy_type  VARCHAR(50)   TREND_FOLLOWING / MEAN_REVERSION / MOMENTUM / VOLATILITY_BREAKOUT
+├── strategy_type  VARCHAR(50)
+│                  TREND_FOLLOWING / MEAN_REVERSION / MOMENTUM
+│                  / LOW_VOLATILITY / VOLATILITY_BREAKOUT / UNCLASSIFIED
 ├── score          DECIMAL(5,2)
 └── classified_at  DATETIME
+
+trading_signals
+├── id             BIGINT PK
+├── stock_id       BIGINT FK → stocks.id
+├── ticker         VARCHAR(50)
+├── strategy_type  VARCHAR(50)
+├── action         VARCHAR(50)
+│                  '신규 매수 진입' / '상한가 도달 (매수 보류)'
+│                  / '전량 매도 청산' / '50% 부분 익절'
+│                  / '과열 익절 청산' / '긴급 손절'
+├── signal_value   DOUBLE    (1.0 / -0.5 / -1.0 / -1.5 / -2.0)
+├── close_price    DECIMAL(15,2)
+├── signal_date    DATE
+└── created_at     DATETIME
 ```
 
 ---

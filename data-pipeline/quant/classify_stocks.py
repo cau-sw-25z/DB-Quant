@@ -1,9 +1,7 @@
 import pandas as pd
-import numpy as np
 from sqlalchemy import create_engine
 from datetime import datetime
-import sys
-import os
+import sys, os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from config import DB_URL
 
@@ -130,7 +128,12 @@ class StockScorer:
             score = ma60 * 10 + ret90 * 5
             return 'TREND_FOLLOWING', round(score, 2)
 
-        # 4순위: 평균회귀형 - 변동성 낮고 이평 교차 빈번한 종목만
+        # 4순위: 저변동성 채널형
+        if vol <= 0.25 and cross >= 3 and 0.40 <= ma60 <= 0.60:
+            score = cross + (1 - vol) * 5
+            return 'LOW_VOLATILITY', round(score, 2)
+        
+        # 5순위: 평균회귀형 - 변동성 낮고 이평 교차 빈번한 종목만
         if vol <= 0.30 and cross >= 2:
             score = cross + (1 - vol) * 5
             return 'MEAN_REVERSION', round(score, 2)
@@ -144,12 +147,6 @@ class StockScorer:
 
         df['strategy_type'] = results.apply(lambda x: x[0])
         df['score']         = results.apply(lambda x: x[1])
-
-        # 기존 코드와 호환되도록 점수 컬럼도 유지
-        df['score_trend']     = (df['strategy_type'] == 'TREND_FOLLOWING').astype(int)
-        df['score_mean_rev']  = (df['strategy_type'] == 'MEAN_REVERSION').astype(int)
-        df['score_momentum']  = (df['strategy_type'] == 'MOMENTUM').astype(int)
-        df['score_vol_break'] = (df['strategy_type'] == 'VOLATILITY_BREAKOUT').astype(int)
 
         return df
     
