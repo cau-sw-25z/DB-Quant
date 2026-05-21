@@ -35,19 +35,3 @@ class StrategyFactory:
             return strategy_class(df, ma_window=20, envelope_pct=0.05)
         else:
             return strategy_class(df)
-    
-    def get_strategy_type_from_db(self, ticker: str) -> str | None:
-        query = text("""
-                    SELECT strategy_type
-                    FROM stock_classification
-                    WHERE ticker = :ticker
-                    """)
-        with engine.connect() as conn:
-            result = conn.execute(query, {"ticker": ticker}).fetchone()
-        
-        if result is None:
-            return None
-        strategy_type = result[0]
-        if strategy_type in ("UNCLASSIFIED", "VOLATILITY_BREAKOUT"):
-            return None
-        return strategy_type
