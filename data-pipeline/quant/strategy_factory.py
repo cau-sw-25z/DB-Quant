@@ -28,10 +28,10 @@ class StrategyFactory:
             return None
         
         if strategy_type == "MEAN_REVERSION":
-            return strategy_class(df, bb_window=20, bb_std=2.0)
+            return strategy_class(df)
         elif strategy_type == "TREND_FOLLOWING":
-            return strategy_class(df, breakout_window=20, ma_exit=20, ma_trend=60)
+            return strategy_class(df, breakout_window=20)
         elif strategy_type == "LOW_VOLATILITY":
-            return strategy_class(df, ma_window=20, envelope_pct=0.05)
+            return strategy_class(df, envelope_pct=0.05)
         else:
             return strategy_class(df)
