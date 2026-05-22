@@ -17,6 +17,9 @@ def calculate_all_indicators(df: pd.DataFrame) -> pd.DataFrame:
     MA / RSI / MACD / 볼린저밴드를 계산해서 돌려주는 함수.
     """
     close = df['close_price']
+    high = df['high_price']
+    low = df['low_price']
+    vol = df['volume']
     n = len(close)
 
     # 이동평균(MA)
@@ -57,6 +60,17 @@ def calculate_all_indicators(df: pd.DataFrame) -> pd.DataFrame:
     else:
         df['bb_lower'] = df['bb_mid'] = df['bb_upper'] = None
         df['bb_width'] = df['bb_pct_b'] = None
+        
+    if n >= 15:
+        high_low = high - low
+        high_close = (high - close.shift()).abs()
+        low_close = (low - close.shift()).abs()
+        tr = pd.concat([high_low, high_close, low_close], axis=1).max(axis=1)
+        df['atr_14'] = tr.rolling(window=14).mean()
+    else:
+        df['atr_14'] = None
+        
+    df['vol_ma_20'] = vol.rolling(window=20).mean().shift(1)
 
     return df
 
@@ -67,7 +81,7 @@ def _process_ticker(stock_id: int, ticker: str, target_date: date = None):
     target_date 없으면 → 전 기간 저장 (초기 1회용)
     """
     query = text("""
-                SELECT date, close_price
+                SELECT date, open_price, high_price, low_price, close_price, volume
                 FROM price_histories
                 WHERE stock_id = :stock_id
                 ORDER BY date ASC
@@ -90,7 +104,8 @@ def _process_ticker(stock_id: int, ticker: str, target_date: date = None):
         'ma_5', 'ma_20', 'ma_60', 'ma_120',
         'rsi_14', 'rsi_overbought', 'rsi_oversold',
         'macd', 'macd_signal', 'macd_hist',
-        'bb_upper', 'bb_mid', 'bb_lower', 'bb_width', 'bb_pct_b'
+        'bb_upper', 'bb_mid', 'bb_lower', 'bb_width', 'bb_pct_b',
+        'atr_14', 'vol_ma_20',
     ]
     result_df = df[cols]
     
@@ -166,7 +181,9 @@ def validate_indicators():
         ROUND(100.0 * SUM(CASE WHEN ma_120 IS NULL THEN 1 ELSE 0 END) / COUNT(*), 1) AS ma120_null_pct,
         ROUND(100.0 * SUM(CASE WHEN rsi_14 IS NULL THEN 1 ELSE 0 END) / COUNT(*), 1) AS rsi_null_pct,
         ROUND(100.0 * SUM(CASE WHEN macd   IS NULL THEN 1 ELSE 0 END) / COUNT(*), 1) AS macd_null_pct,
-        ROUND(100.0 * SUM(CASE WHEN bb_upper IS NULL THEN 1 ELSE 0 END) / COUNT(*), 1) AS bb_null_pct
+        ROUND(100.0 * SUM(CASE WHEN bb_upper IS NULL THEN 1 ELSE 0 END) / COUNT(*), 1) AS bb_null_pct,
+        ROUND(100.0 * SUM(CASE WHEN atr_14 IS NULL THEN 1 ELSE 0 END) / COUNT(*), 1) AS atr_null_pct,
+        ROUND(100.0 * SUM(CASE WHEN vol_ma_20 IS NULL THEN 1 ELSE 0 END) / COUNT(*), 1) AS vol_ma_null_pct
     FROM technical_indicators
     """
     result = pd.read_sql(query, engine)

@@ -78,9 +78,20 @@ class DailyScreener:
                         ph.high_price,
                         ph.low_price,
                         ph.close_price,
-                        ph.volume
+                        ph.volume,
+                        ti.ma_5,
+                        ti.ma_20,
+                        ti.ma_60,
+                        ti.rsi_14,
+                        ti.bb_upper,
+                        ti.bb_mid,
+                        ti.bb_lower,
+                        ti.atr_14,
+                        ti.vol_ma_20
                     FROM price_histories ph
                     JOIN stocks s ON ph.stock_id = s.id
+                    LEFT JOIN technical_indicators ti
+                        ON ti.stock_id = s.id AND ti.date = ph.date
                     WHERE s.ticker = :ticker
                     AND ph.date >= :cutoff
                     ORDER BY ph.date ASC
