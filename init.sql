@@ -24,6 +24,7 @@ CREATE TABLE IF NOT EXISTS `quant_db`.`users` (
   `id` BIGINT NOT NULL AUTO_INCREMENT,
   `email` VARCHAR(255) NOT NULL,
   `nickname` VARCHAR(255) NOT NULL,
+  `password_hash` VARCHAR(255) NOT NULL,
   `created_at` DATETIME NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE INDEX `email_UNIQUE` (`email` ASC) VISIBLE)
