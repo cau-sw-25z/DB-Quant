@@ -24,41 +24,39 @@ def load_and_prepare():
     """
     metrics_df = pd.read_sql(metrics_query, engine)
     
-    # price_histories: 최근 60일 고가/저가/거래량 (이동평균, ATR, 거래량 급증 계산용)
-    price_query = """
-    SELECT stock_id, date, close_price, high_price, low_price, volume
-    FROM price_histories
-    WHERE date >= DATE_SUB(CURDATE(), INTERVAL 120 DAY)
-    ORDER BY stock_id, date
-    """
-    price_df = pd.read_sql(price_query, engine)
-    
     print(f"   → 지표 데이터: {len(metrics_df)}개 종목")
-    print(f"   → 가격 데이터: {len(price_df)}행 (최근 90일)")
-    return metrics_df, price_df
+    return metrics_df
 
 # 2. price_histories 에서 추가 지표 계산
 def calc_price_features(price_df):
     print("🧮 [2/4] 추가 지표 계산 중 (이동평균, ATR, 거래량 급증)...")
+
+    ti_query = """
+    SELECT ti.stock_id, ti.ma_20, ti.ma_60, ti.atr_14, ti.vol_ma_20,
+        ph.close_price, ph.high_price, ph.low_price, ph.volume, ph.date
+    FROM technical_indicators ti
+    JOIN price_histories ph ON ti.stock_id = ph.stock_id AND ti.date = ph.date
+    WHERE ti.date >= DATE_SUB(CURDATE(), INTERVAL 120 DAY)
+    ORDER BY ti.stock_id, ti.date
+    """
+    ti_df = pd.read_sql(ti_query, engine)
     
     results = []
     
-    for stock_id, grp in price_df.groupby('stock_id'):
+    for stock_id, grp in ti_df.groupby('stock_id'):
         grp = grp.sort_values('date').reset_index(drop=True)
         
         if len(grp) < 20:
             continue
         
         close = grp['close_price']
-        high = grp['high_price']
-        low = grp['low_price']
         vol = grp['volume']
+        ma20 = grp['ma_20']
+        ma60 = grp['ma_60']
+        atr_14 = grp['atr_14']
+        vol_ma20 = grp['vol_ma_20']
         
-        # 1. 이동편균 계산
-        ma20 = close.rolling(window=20).mean()
-        ma60 = close.rolling(window=60).mean()
-        
-        # 2. 60일 이평 위에 있는 날 비율
+        # 60일 이평 위에 있는 날 비율
         valid_ma60 = ma60.dropna()
         if len(valid_ma60) > 0:
             above_ma60_ratio = (close[-len(valid_ma60):] > valid_ma60).mean()
@@ -74,13 +72,11 @@ def calc_price_features(price_df):
         cross_count = above_flag.diff().abs().sum()
         
         # 5. ATR 비율
-        daily_range = high - low
-        atr = daily_range.rolling(window=20).mean().iloc[-1]
+        last_atr = atr_14.dropna().iloc[-1] if grp['atr_14'].notna().any() else 0
         last_close = close.iloc[-1]
-        atr_ratio = (atr / last_close) if last_close > 0 else 0
+        atr_ratio = (last_atr / last_close) if last_close > 0 else 0
         
         # 6. 거래량 급증 빈도
-        vol_ma20 = vol.rolling(window=20).mean()
         volume_spike = (vol > vol_ma20 * 2)
         volume_spike_freq = volume_spike.sum()
         
@@ -202,10 +198,10 @@ def main():
     print(f"🚀 종목 전략 유형 분류 시작 [{datetime.now().strftime('%Y-%m-%d %H:%M')}]\n")
     
     # 1. 데이터 로드
-    metrics_df, price_df = load_and_prepare()
+    metrics_df = load_and_prepare()
     
     # 2. 가격 데이터로 추가 지표 계산
-    features_df = calc_price_features(price_df)
+    features_df = calc_price_features()
     
     # 3. 두 DataFrame 합치기
     df = pd.merge(metrics_df, features_df, on='stock_id', how='inner')
