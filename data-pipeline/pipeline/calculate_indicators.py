@@ -1,7 +1,8 @@
 import pandas as pd
 import pandas_ta as ta
 from sqlalchemy import create_engine, text
-from datetime import date
+from sqlalchemy.dialects.mysql import insert
+from datetime import date, timedelta
 import sys
 import os
 
@@ -74,6 +75,11 @@ def calculate_all_indicators(df: pd.DataFrame) -> pd.DataFrame:
 
     return df
 
+def _insert_ignore(table, conn, keys, data_iter):
+    rows = [dict(zip(keys, row)) for row in data_iter]
+    stmt = insert(table.table).prefix_with("IGNORE")
+    conn.execute(stmt, rows)
+
 def _process_ticker(stock_id: int, ticker: str, target_date: date = None):
     """
     종목 하나의 지표를 계산하고 technical_indicators 테이블에 저장.
@@ -120,7 +126,7 @@ def _process_ticker(stock_id: int, ticker: str, target_date: date = None):
         con=engine,
         if_exists='append',
         index=False,
-        method='multi'
+        method=_insert_ignore
     )
     
 def run_full_batch():
@@ -157,19 +163,31 @@ def run_daily_batch(target_date: date = None):
         
     print(f"🔄 [{target_date}] 일배치 기술지표 계산 시작...")
     
-    stocks_df = pd.read_sql(
-        "SELECT id, ticker FROM stocks ORDER BY ticker",
-        engine
-    )
-    
-    for _, row in stocks_df.iterrows():
-        try:
-            _process_ticker(row['id'], row['ticker'], target_date=target_date)
-        except Exception as e:
-            print(f"   ⚠️ [{row['ticker']}] 일배치 실패: {e}")
-            continue
+    with engine.connect() as conn:
+        result = conn.execute(text("SELECT MAX(date) FROM technical_indicators"))
+        last_date = result.fetchone()[0]
+        
+    start = last_date + timedelta(days=1)
+    end = target_date
 
-    print(f"✅ [{target_date}] 일배치 완료!")
+    current = start
+    while current <= end:
+        print(f"   📅 {current} 계산 중...")
+        stocks_df = pd.read_sql(
+            "SELECT id, ticker FROM stocks ORDER BY ticker",
+            engine
+        )
+        for _, row in stocks_df.iterrows():
+            try:
+                _process_ticker(row['id'], row['ticker'], target_date=current)
+            except Exception as e:
+                print(f"   ⚠️ [{row['ticker']}] 일배치 실패: {e}")
+                continue
+        print(f"   ✅ {current} 완료!")
+        current += timedelta(days=1)
+
+    print(f"✅ 전체 일배치 완료! ({start} ~ {end})")
+    
     
 def validate_indicators():
     print("\n🔍 적재 결과 검증...")
@@ -190,5 +208,5 @@ def validate_indicators():
     print(result.to_string(index=False))
     
 if __name__ == "__main__":
-    run_full_batch()
+    run_daily_batch()
     validate_indicators()
