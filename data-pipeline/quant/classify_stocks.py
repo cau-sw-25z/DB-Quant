@@ -28,7 +28,7 @@ def load_and_prepare():
     return metrics_df
 
 # 2. price_histories 에서 추가 지표 계산
-def calc_price_features(price_df):
+def calc_price_features():
     print("🧮 [2/4] 추가 지표 계산 중 (이동평균, ATR, 거래량 급증)...")
 
     ti_query = """
