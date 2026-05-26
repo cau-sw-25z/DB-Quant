@@ -5,6 +5,9 @@ from .base_strategy import BaseStrategy
 class MeanReversionStrategy(BaseStrategy):
     def __init__(self, df):
         super().__init__(df)
+        
+    def add_indicators(self):
+        pass
 
     def generate_signals(self):
         self.df['Signal'] = 0.0
