@@ -13,7 +13,7 @@ class MeanReversionStrategy(BaseStrategy):
         self.df['Signal'] = 0.0
 
         # 조건 1. 매수: 주가가 하단 밴드르 뚫고 내려가며 RSI가 30 이하(과매도)일 때
-        self.df.loc[(self.df['close_price'] < self.df['ma_20']) & (self.df['rsi_14'] < 40),'Signal'] = 1.0
+        self.df.loc[(self.df['close_price'] < self.df['bb_lower']) & (self.df['rsi_14'] < 40),'Signal'] = 1.0
 
         # 조건 2. 1차 분할 매도: 주가가 중심선(MA20)을 회복했을 때 (-0.5 시그널)
         self.df.loc[self.df['close_price'] > self.df['ma_20'], 'Signal'] = -0.5

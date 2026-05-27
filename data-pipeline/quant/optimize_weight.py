@@ -38,12 +38,13 @@ class WeightResult:
 def fetch_volatilities(tickers):
     ticker_list = ", ".join(f"'{t}'" for t in tickers)
     query = f"""
-        SELECT ticker, MAX(annual_volatility) as annual_volatility
-        FROM  stock_metrics
-        WHERE ticker IN ({ticker_list})
-        AND annual_volatility IS NOT NULL
-        AND annual_volatility > 0
-        GROUP BY ticker
+        SELECT s.ticker, MAX(sm.annual_volatility) as annual_volatility
+        FROM  stock_metrics sm
+        JOIN stocks s ON sm.stock_id = s.id
+        WHERE s.ticker IN ({ticker_list})
+        AND sm.annual_volatility IS NOT NULL
+        AND sm.annual_volatility > 0
+        GROUP BY s.ticker
     """
     
     df = pd.read_sql(query, engine)
