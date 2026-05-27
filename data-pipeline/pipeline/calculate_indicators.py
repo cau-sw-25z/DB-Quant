@@ -102,11 +102,10 @@ def _process_ticker(stock_id: int, ticker: str, target_date: date = None):
     
     df = calculate_all_indicators(df)
     
-    df['ticker'] = ticker
     df['stock_id'] = stock_id
     
     cols = [
-        'stock_id', 'ticker', 'date',
+        'stock_id', 'date',
         'ma_5', 'ma_20', 'ma_60', 'ma_120',
         'rsi_14', 'rsi_overbought', 'rsi_oversold',
         'macd', 'macd_signal', 'macd_hist',
@@ -208,5 +207,5 @@ def validate_indicators():
     print(result.to_string(index=False))
     
 if __name__ == "__main__":
-    run_daily_batch()
+    run_full_batch()
     validate_indicators()

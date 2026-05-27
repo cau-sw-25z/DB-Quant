@@ -13,7 +13,7 @@ def load_and_prepare():
     # stock_metrics: 수익률/변동성
     # 종목별 가장 최신 날짜 행만 가져옴
     metrics_query = text("""
-    SELECT sm.stock_id, sm.ticker, sm.cum_return_30d, sm.cum_return_90d,
+    SELECT sm.stock_id, sm.cum_return_30d, sm.cum_return_90d,
         sm.annual_volatility, sm.sharpe_ratio
     FROM stock_metrics sm
     INNER JOIN (
@@ -28,6 +28,8 @@ def load_and_prepare():
     AND s.name NOT LIKE '%1우'
     AND s.name NOT LIKE '%2우'
     AND s.name NOT LIKE '%3우'
+    AND s.name NOT LIKE '%우B'
+    AND s.name NOT LIKE '%우C'
     """)
     with engine.connect() as conn:
         metrics_df = pd.read_sql(metrics_query, conn)
@@ -161,7 +163,7 @@ def classify_and_save(df: pd.DataFrame):
     # strategy_type, score가 이미 calculate_all_scores에서 채워져 있음
     df['classified_at'] = datetime.now()
 
-    result_df = df[['stock_id', 'ticker', 'strategy_type', 'score', 'classified_at']]
+    result_df = df[['stock_id', 'strategy_type', 'score', 'classified_at']]
 
     result_df.to_sql(
         name='stock_classification',
