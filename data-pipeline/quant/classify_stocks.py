@@ -21,6 +21,10 @@ def load_and_prepare():
         FROM stock_metrics
         GROUP BY stock_id
     ) latest ON sm.stock_id = latest.stock_id AND sm.date = latest.max_date
+    JOIN stocks s ON sm.stock_id = s.id
+    WHERE s.name NOT LIKE '%스팩%'
+    AND s.name NOT LIKE '%리츠%'
+    AND s.name NOT REGEXP '(우|1우|2우|3우)$'
     """
     metrics_df = pd.read_sql(metrics_query, engine)
     
@@ -29,7 +33,7 @@ def load_and_prepare():
 
 # 2. price_histories 에서 추가 지표 계산
 def calc_price_features():
-    print("🧮 [2/4] 추가 지표 계산 중 (이동평균, ATR, 거래량 급증)...")
+    print("🧮 [2/4] 추가 지표 계산 중...")
 
     ti_query = """
     SELECT ti.stock_id, ti.ma_20, ti.ma_60, ti.atr_14, ti.vol_ma_20,
@@ -120,7 +124,7 @@ class StockScorer:
             return 'MOMENTUM', round(score, 2)
 
         # 3순위: 추세추종형
-        if ma60 >= 0.60 and ret90 > 0:
+        if ma60 >= 0.60 and ret90 > -0.10:
             score = ma60 * 10 + ret90 * 5
             return 'TREND_FOLLOWING', round(score, 2)
 
