@@ -1,5 +1,5 @@
 import pandas as pd
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from datetime import datetime
 import sys, os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -12,7 +12,7 @@ def load_and_prepare():
     print("📊 [1/4] 지표 데이터 불러오는 중...")
     # stock_metrics: 수익률/변동성
     # 종목별 가장 최신 날짜 행만 가져옴
-    metrics_query = """
+    metrics_query = text("""
     SELECT sm.stock_id, sm.ticker, sm.cum_return_30d, sm.cum_return_90d,
         sm.annual_volatility, sm.sharpe_ratio
     FROM stock_metrics sm
@@ -28,8 +28,9 @@ def load_and_prepare():
     AND s.name NOT LIKE '%1우'
     AND s.name NOT LIKE '%2우'
     AND s.name NOT LIKE '%3우'
-    """
-    metrics_df = pd.read_sql(metrics_query, engine)
+    """)
+    with engine.connect() as conn:
+        metrics_df = pd.read_sql(metrics_query, conn)
     
     print(f"   → 지표 데이터: {len(metrics_df)}개 종목")
     return metrics_df
