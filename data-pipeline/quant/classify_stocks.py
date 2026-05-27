@@ -24,7 +24,10 @@ def load_and_prepare():
     JOIN stocks s ON sm.stock_id = s.id
     WHERE s.name NOT LIKE '%스팩%'
     AND s.name NOT LIKE '%리츠%'
-    AND s.name NOT REGEXP '(우|1우|2우|3우)$'
+    AND s.name NOT LIKE '%우'
+    AND s.name NOT LIKE '%1우'
+    AND s.name NOT LIKE '%2우'
+    AND s.name NOT LIKE '%3우'
     """
     metrics_df = pd.read_sql(metrics_query, engine)
     
