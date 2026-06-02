@@ -3,3 +3,6 @@ from .mean_reversion import MeanReversionStrategy
 from .trend_following import TrendFollowingStrategy
 from .small_cap_momentum import SmallCapMomentumStrategy
 from .defensive_channel import DefensiveChannelStrategy
+from .vma import VMAStrategy
+from .fma import FMAStrategy
+from .trb import TRBStrategy

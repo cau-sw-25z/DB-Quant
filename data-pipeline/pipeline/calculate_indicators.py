@@ -72,6 +72,12 @@ def calculate_all_indicators(df: pd.DataFrame) -> pd.DataFrame:
         df['atr_14'] = None
         
     df['vol_ma_20'] = vol.rolling(window=20).mean().shift(1)
+    
+    typical_price = (df['high_price'] + df['low_price'] + df['close_price'])
+    df['vwap_20'] = (
+        (typical_price * vol).rolling(window=20).sum()
+        / vol.rolling(window=20).sum()
+    )
 
     return df
 
@@ -110,7 +116,7 @@ def _process_ticker(stock_id: int, ticker: str, target_date: date = None):
         'rsi_14', 'rsi_overbought', 'rsi_oversold',
         'macd', 'macd_signal', 'macd_hist',
         'bb_upper', 'bb_mid', 'bb_lower', 'bb_width', 'bb_pct_b',
-        'atr_14', 'vol_ma_20',
+        'atr_14', 'vol_ma_20', 'vwap_20', 'adx_14',
     ]
     result_df = df[cols]
     
@@ -200,7 +206,9 @@ def validate_indicators():
         ROUND(100.0 * SUM(CASE WHEN macd   IS NULL THEN 1 ELSE 0 END) / COUNT(*), 1) AS macd_null_pct,
         ROUND(100.0 * SUM(CASE WHEN bb_upper IS NULL THEN 1 ELSE 0 END) / COUNT(*), 1) AS bb_null_pct,
         ROUND(100.0 * SUM(CASE WHEN atr_14 IS NULL THEN 1 ELSE 0 END) / COUNT(*), 1) AS atr_null_pct,
-        ROUND(100.0 * SUM(CASE WHEN vol_ma_20 IS NULL THEN 1 ELSE 0 END) / COUNT(*), 1) AS vol_ma_null_pct
+        ROUND(100.0 * SUM(CASE WHEN adx_14 IS NULL THEN 1 ELSE 0 END) / COUNT(*), 1) AS adx_null_pct,
+        ROUND(100.0 * SUM(CASE WHEN vol_ma_20 IS NULL THEN 1 ELSE 0 END) / COUNT(*), 1) AS vol_ma_null_pct,
+        ROUND(100.0 * SUM(CASE WHEN vwap_20 IS NULL THEN 1 ELSE 0 END) / COUNT(*), 1) AS vwap_null_pct
     FROM technical_indicators
     """
     result = pd.read_sql(query, engine)

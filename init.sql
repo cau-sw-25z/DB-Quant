@@ -165,7 +165,9 @@ CREATE TABLE IF NOT EXISTS `quant_db`.`technical_indicators` (
   `bb_width`       DOUBLE,
   `bb_pct_b`       DOUBLE,
   `atr_14`         DOUBLE,
+  `adx_14`         DOUBLE,
   `vol_ma_20`      DOUBLE,
+  `vwap_20`        DOUBLE,
   PRIMARY KEY (`id`),
   UNIQUE INDEX `idx_technical_indicators` (`stock_id` ASC, `date` ASC),
   CONSTRAINT `fk_technical_indicators_stocks`

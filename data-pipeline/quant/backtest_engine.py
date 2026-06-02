@@ -3,6 +3,7 @@ import numpy as np
 from datetime import datetime
 from sqlalchemy import text
 from strategy_factory import StrategyFactory
+import math
 
 class BacktestEngine:
     def __init__(self, engine, initial_capital=1_000_000):
@@ -16,7 +17,7 @@ class BacktestEngine:
                         ph.close_price, ph.volume,
                         ti.ma_5, ti.ma_20, ti.ma_60,
                         ti.rsi_14, ti.bb_upper, ti.bb_mid, ti.bb_lower,
-                        ti.atr_14, ti.vol_ma_20
+                        ti.atr_14, ti.vol_ma_20, ti.adx_14
                     FROM price_histories ph
                     LEFT JOIN technical_indicators ti
                     ON ti.stock_id = ph.stock_id AND ti.date = ph.date
@@ -72,13 +73,28 @@ class BacktestEngine:
             next_open = rows.loc[i + 1, 'open_price']
             next_date = rows.loc[i + 1, 'date']
             
+            if pd.isna(next_open) or next_open <= 0:
+                continue
+            
             if signal == 1.0 and position is None:
-                if pd.isna(next_open) or next_open <= 0:
-                    continue
                 position = {
                     'buy_price': next_open,
-                    'buy_date': next_date
+                    'buy_date': next_date,
+                    'remaining': 1.0,
                 }
+                
+            elif math.isclose(signal, -0.5) and position is not None and position['remaining'] > 0.5:
+                profit_rate = (next_open - position['buy_price']) / position['buy_price']
+                trades.append({
+                    'buy_date': position['buy_date'],
+                    'sell_date': next_date,
+                    'buy_price': position['buy_price'],
+                    'sell_price': next_open,
+                    'profit_rate': profit_rate,
+                    'signal_type': signal,
+                    'weight': 0.5,
+                })
+                position['remaining'] = 0.5
                 
             elif signal < 0 and position is not None:
                 profit_rate = (next_open - position['buy_price']) / position['buy_price']
@@ -89,6 +105,7 @@ class BacktestEngine:
                     'sell_price': next_open,
                     'profit_rate': profit_rate,
                     'signal_type': signal,
+                    'weight': position['remaining'],
                 })
                 position = None
         
@@ -98,11 +115,17 @@ class BacktestEngine:
         if not trades:
             return None
         
-        returns = [t['profit_rate'] for t in trades]
+        from collections import defaultdict
+        rt_map = defaultdict(float)
+        
+        for t in trades:
+            rt_map[t['buy_date']] += t['profit_rate'] * t['weight']
+        
+        rt_returns = list(rt_map.values())
         
         # 총 수익률(복리 계산)
         total_return = 1.0
-        for r in returns:
+        for r in rt_returns:
             total_return *= (1 + r)
         total_return -= 1.0
         
@@ -114,11 +137,11 @@ class BacktestEngine:
         annual_return = (1 + total_return) ** (1 / max(years, 0.01)) - 1
         
         # 승률
-        win_rate = len([r for r in returns if r > 0]) / len(returns)
+        win_rate = len([r for r in rt_returns if r > 0]) / len(rt_returns)
         
         # MDD (최데 낙폭)
         cumulative = [1.0]
-        for r in returns:
+        for r in rt_returns:
             cumulative.append(cumulative[-1] * (1 + r))
         peak = cumulative[0]
         mdd = 0.0
@@ -128,9 +151,9 @@ class BacktestEngine:
             mdd = min(mdd, drawdown)
             
         # 샤프 지수(무위험 수익률 3% 가정)
-        risk_free = 0.03 / 252
-        if len(returns) > 1 and np.std(returns) > 0:
-            sharpe = (np.mean(returns) -risk_free) / np.std(returns) * np.sqrt(252)
+        risk_free = 0.03
+        if len(rt_returns) > 1 and np.std(rt_returns) > 0:
+            sharpe = (np.mean(rt_returns) - risk_free) / (np.std(rt_returns) * np.sqrt(252))
         else:
             sharpe = None
         
@@ -140,7 +163,7 @@ class BacktestEngine:
             'mdd': round(mdd, 6),
             'sharpe_ratio': round(sharpe, 4) if sharpe else None,
             'win_rate': round(win_rate, 4),
-            'trade_count': len(trades),
+            'trade_count': len(rt_returns),
         }
         
     def _save_result(self, stock_id: int, strategy_type: str, start_date: str, end_date: str, metrics: dict):

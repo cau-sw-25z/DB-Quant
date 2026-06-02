@@ -87,6 +87,7 @@ class DailyScreener:
                         ti.bb_mid,
                         ti.bb_lower,
                         ti.atr_14,
+                        ti.adx_14,
                         ti.vol_ma_20
                     FROM price_histories ph
                     JOIN stocks s ON ph.stock_id = s.id

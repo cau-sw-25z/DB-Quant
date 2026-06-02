@@ -120,12 +120,12 @@ class StockScorer:
         cross = row['cross_ma20_freq']
 
         # 1순위: 변동성돌파형
-        if vol >= 0.8 and atr >= 0.07:
+        if vol >= 0.65 and atr >= 0.06:
             score = vol + atr * 10
             return 'VOLATILITY_BREAKOUT', round(score, 2)
 
         # 2순위: 모멘텀형
-        if ret30 >= 0.10 and spike >= 2:
+        if ret30 >= 0.15 and ret90 >= 0.05 and spike >= 3 and vol <= 0.65:
             score = ret30 * 10 + spike
             return 'MOMENTUM', round(score, 2)
 
