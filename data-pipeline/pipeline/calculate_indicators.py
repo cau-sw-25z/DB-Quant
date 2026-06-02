@@ -71,6 +71,12 @@ def calculate_all_indicators(df: pd.DataFrame) -> pd.DataFrame:
     else:
         df['atr_14'] = None
         
+    if n >= 28:
+        adx_df = ta.adx(high, low, close, length=14)
+        df['adx_14'] = adx_df['ADX_14']
+    else:
+        df['adx_14'] = None
+        
     df['vol_ma_20'] = vol.rolling(window=20).mean().shift(1)
     
     typical_price = (df['high_price'] + df['low_price'] + df['close_price'])
