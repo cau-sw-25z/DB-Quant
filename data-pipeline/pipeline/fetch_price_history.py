@@ -31,7 +31,7 @@ def fetch_and_insert_data():
             last_date = last_date_result.iloc[0]['last_date']
             
             if last_date is None:
-                start_date = "2024-01-01"
+                start_date = "2020-01-01"
             else:
                 from datetime import timedelta
                 next_date = pd.Timestamp(last_date) + timedelta(days=1)

@@ -1,4 +1,5 @@
 import pandas as pd
+from .base_strategy import BaseStrategy
 
 # 가변 이동평균 전략
 class VMAStrategy(BaseStrategy):

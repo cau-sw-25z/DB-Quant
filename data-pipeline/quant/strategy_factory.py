@@ -1,37 +1,25 @@
 import pandas as pd
-from sqlalchemy import create_engine, text
-import sys
-import os
+import sys, os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from config import DB_URL
 
 from strategies import (
     MeanReversionStrategy,
     TrendFollowingStrategy,
-    SmallCapMomentumStrategy,
-    DefensiveChannelStrategy,
 )
 
-engine = create_engine(DB_URL)
 
 class StrategyFactory:
     STRATEGY_MAP = {
-        "MEAN_REVERSION": MeanReversionStrategy,
         "TREND_FOLLOWING": TrendFollowingStrategy,
-        "MOMENTUM": SmallCapMomentumStrategy,
-        "LOW_VOLATILITY": DefensiveChannelStrategy,
+        "MEAN_REVERSION":  MeanReversionStrategy,
     }
 
     def get_strategy_by_name(self, strategy_type: str, df: pd.DataFrame):
         strategy_class = self.STRATEGY_MAP.get(strategy_type)
         if strategy_class is None:
             return None
-        
-        if strategy_type == "MEAN_REVERSION":
-            return strategy_class(df)
-        elif strategy_type == "TREND_FOLLOWING":
+
+        if strategy_type == "TREND_FOLLOWING":
             return strategy_class(df, breakout_window=20, atr_multiplier=1.5)
-        elif strategy_type == "LOW_VOLATILITY":
-            return strategy_class(df)
-        else:
-            return strategy_class(df)
+
+        return strategy_class(df)
