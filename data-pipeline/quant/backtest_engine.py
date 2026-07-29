@@ -60,18 +60,30 @@ class BacktestEngine:
 
         return df
 
-    def _generate_dynamic_signals(self, df: pd.DataFrame) -> pd.DataFrame:
+    def _generate_dynamic_signals(self, df: pd.DataFrame, dynamic_params: dict = None) -> pd.DataFrame:
         """
         날짜별 ADX를 기준으로 두 전략 시그널 중 하나를 선택.
-        ADX > 25  → TrendFollowingStrategy 시그널 사용
-        ADX ≤ 25  → MeanReversionStrategy 시그널 사용
+        ADX > adx_split  → TrendFollowingStrategy 시그널 사용
+        ADX ≤ adx_split  → MeanReversionStrategy 시그널 사용
         ADX NaN   → 시그널 0 (관망)
+
+        dynamic_params 형식:
+        {
+            "adx_split": 25,
+            "TREND_FOLLOWING": {"adx_threshold": 25, "vol_multiplier": 1.5},
+            "MEAN_REVERSION": {"rsi_threshold": 35},
+        }
 
         strategy_used 컬럼에 진입 전략을 기록해서
         _simulate_trades에서 진입/청산 전략 일관성을 보장함.
         """
-        trend_obj = self.factory.get_strategy_by_name("TREND_FOLLOWING", df.copy())
-        mean_obj  = self.factory.get_strategy_by_name("MEAN_REVERSION",  df.copy())
+        dynamic_params = dynamic_params or {}
+        adx_split = dynamic_params.get("adx_split", 25)
+        trend_params = dynamic_params.get("TREND_FOLLOWING", {})
+        mean_params = dynamic_params.get("MEAN_REVERSION", {})
+
+        trend_obj = self.factory.get_strategy_by_name("TREND_FOLLOWING", df.copy(), trend_params)
+        mean_obj  = self.factory.get_strategy_by_name("MEAN_REVERSION",  df.copy(), mean_params)
 
         if trend_obj is None or mean_obj is None:
             return pd.DataFrame()
@@ -93,7 +105,7 @@ class BacktestEngine:
             adx = row['adx_14']
             if pd.isna(adx):
                 return 0.0, 'NONE'
-            if adx > 25:
+            if adx > adx_split:
                 return row['trend_signal'], 'TREND'
             return row['mean_signal'], 'MEAN'
 
@@ -323,7 +335,7 @@ class BacktestEngine:
 
     def run(self, ticker: str, start_date: str, end_date: str,
             strategy_type: str = None, strategy_params: dict = None,
-            save_label: str = None) -> dict | None:
+            save_label: str = None, dynamic_params: dict = None) -> dict | None:
         stock_id = self._get_stock_id(ticker)
         if stock_id is None:
             return None
@@ -335,8 +347,8 @@ class BacktestEngine:
         buy_hold_metrics = self._calc_buy_hold_metrics(df)
 
         if strategy_type is None:
-            signal_df = self._generate_dynamic_signals(df)
-            save_type = 'DYNAMIC'
+            signal_df = self._generate_dynamic_signals(df, dynamic_params)
+            save_type = save_label or 'DYNAMIC'
         else:
             signal_df = self._generate_static_signals(df, strategy_type, strategy_params)
             save_type = save_label or strategy_type
