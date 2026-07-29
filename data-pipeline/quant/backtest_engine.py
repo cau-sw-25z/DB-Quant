@@ -246,9 +246,19 @@ class BacktestEngine:
             drawdown = (v - peak) / peak
             mdd = min(mdd, drawdown)
 
+        # 샤프비율 — 거래 단위 수익률을 실제 거래 빈도 기준으로 연환산
+        MIN_TRADES_FOR_SHARPE = 5  # 표본이 이보다 적으면 표준편차 추정이 불안정해서 신뢰 불가
         risk_free = 0.03
-        if len(rt_returns) > 1 and np.std(rt_returns) > 0:
-            sharpe = (np.mean(rt_returns) - risk_free) / (np.std(rt_returns) * np.sqrt(252))
+        n = len(rt_returns)
+
+        if n >= MIN_TRADES_FOR_SHARPE and np.std(rt_returns) > 0:
+            trades_per_year = n / max(years, 0.01)
+            risk_free_per_trade = risk_free / trades_per_year
+            sharpe = (
+                (np.mean(rt_returns) - risk_free_per_trade)
+                / np.std(rt_returns)
+                * np.sqrt(trades_per_year)
+            )
         else:
             sharpe = None
 
