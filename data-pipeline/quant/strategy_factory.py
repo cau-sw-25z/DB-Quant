@@ -10,6 +10,7 @@ from strategies import (
     MeanReversionStrategy,
     TrendFollowingStrategy,
     TurtleStrategy,
+    SmallCapMomentumStrategy,
 )
 
 
@@ -18,10 +19,13 @@ class StrategyFactory:
         "TREND_FOLLOWING": TrendFollowingStrategy,
         "MEAN_REVERSION":  MeanReversionStrategy,
         "TURTLE": TurtleStrategy,
+        "MOMENTUM": SmallCapMomentumStrategy,
     }
+
     DEFAULT_PARAMS = {
         "TREND_FOLLOWING": {"breakout_window": 20, "atr_multiplier": 1.5},
         "TURTLE": {"entry_window": 20, "exit_window": 10, "atr_multiplier": 2.5},
+        "MOMENTUM": {"breakout_window": 10, "vol_multiplier": 2.0, "atr_multiplier": 2.0},
     }
 
     def get_strategy_by_name(self, strategy_type: str, df: pd.DataFrame, params: dict = None):
