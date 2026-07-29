@@ -6,3 +6,4 @@ from .defensive_channel import DefensiveChannelStrategy
 from .vma import VMAStrategy
 from .fma import FMAStrategy
 from .trb import TRBStrategy
+from .turtle import TurtleStrategy

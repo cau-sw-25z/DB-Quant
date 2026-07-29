@@ -150,19 +150,29 @@ def main():
     print(f"백테스트 대상 종목: {len(tickers)}개 ({START} ~ {END})\n")
 
     bt = BacktestEngine(engine)
+
+    print("=== DYNAMIC 백테스트 ===")
     success, fail = 0, 0
-    
     for ticker in tickers:
         result = bt.run(ticker, START, END)
         if result:
             success += 1
         else:
             fail += 1
-    
-    print(f"\n완료! 성공 {success}개 / 실패·제외 {fail}개")
-    
+    print(f"DYNAMIC 완료! 성공 {success}개 / 실패·제외 {fail}개\n")
+
+    print("=== TURTLE 백테스트 ===")
+    success, fail = 0, 0
+    for ticker in tickers:
+        result = bt.run(ticker, START, END, strategy_type="TURTLE")
+        if result:
+            success += 1
+        else:
+            fail += 1
+    print(f"TURTLE 완료! 성공 {success}개 / 실패·제외 {fail}개\n")
+
     print_stats()
-    
-    
+
+
 if __name__ == "__main__":
     main()

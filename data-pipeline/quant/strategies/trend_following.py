@@ -8,6 +8,11 @@ class TrendFollowingStrategy(BaseStrategy):
         self.breakout_window = breakout_window
         self.atr_multiplier = atr_multiplier
 
+    def add_indicators(self):
+        self.df['Recent_High'] = self.df['high_price'].rolling(self.breakout_window).max().shift(1)
+        self.df['Overheat_Line'] = self.df['ma_20'] * 1.15
+        self.df['ATR_Stop'] = self.df['ma_20'] - (self.df['atr_14'] * self.atr_multiplier)
+
     def generate_signals(self):
         self.add_indicators()
         self.df['Signal'] = 0.0

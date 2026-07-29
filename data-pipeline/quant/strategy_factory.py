@@ -2,9 +2,14 @@ import pandas as pd
 import sys, os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+import pandas as pd
+import sys, os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from strategies import (
     MeanReversionStrategy,
     TrendFollowingStrategy,
+    TurtleStrategy,
 )
 
 
@@ -12,14 +17,20 @@ class StrategyFactory:
     STRATEGY_MAP = {
         "TREND_FOLLOWING": TrendFollowingStrategy,
         "MEAN_REVERSION":  MeanReversionStrategy,
+        "TURTLE": TurtleStrategy,
+    }
+    DEFAULT_PARAMS = {
+        "TREND_FOLLOWING": {"breakout_window": 20, "atr_multiplier": 1.5},
+        "TURTLE": {"entry_window": 20, "exit_window": 10, "atr_multiplier": 2.5},
     }
 
-    def get_strategy_by_name(self, strategy_type: str, df: pd.DataFrame):
+    def get_strategy_by_name(self, strategy_type: str, df: pd.DataFrame, params: dict = None):
         strategy_class = self.STRATEGY_MAP.get(strategy_type)
         if strategy_class is None:
             return None
 
-        if strategy_type == "TREND_FOLLOWING":
-            return strategy_class(df, breakout_window=20, atr_multiplier=1.5)
+        final_params = dict(self.DEFAULT_PARAMS.get(strategy_type, {}))
+        if params:
+            final_params.update(params)
 
-        return strategy_class(df)
+        return strategy_class(df, **final_params)

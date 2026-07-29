@@ -102,6 +102,19 @@ class BacktestEngine:
         )
 
         return base[['date', 'open_price', 'close_price', 'Signal', 'strategy_used']].reset_index(drop=True)
+    
+    def _generate_static_signals(self, df: pd.DataFrame, strategy_type: str, strategy_params: dict = None) -> pd.DataFrame:
+        """
+        단일 전략(TRB/VMA 등)만 써서 시그널 생성. ADX 분기 없이 전략 하나로만 전 종목 테스트할 때 사용.
+        """
+        obj = self.factory.get_strategy_by_name(strategy_type, df.copy(), params=strategy_params)
+        if obj is None:
+            return pd.DataFrame()
+
+        signal_df = obj.generate_signals()
+        signal_df['strategy_used'] = strategy_type
+
+        return signal_df[['date', 'open_price', 'close_price', 'Signal', 'strategy_used']].reset_index(drop=True)
 
     def _simulate_trades(self, signal_df: pd.DataFrame) -> list[dict]:
         """
@@ -298,7 +311,9 @@ class BacktestEngine:
                 **cleaned,
             })
 
-    def run(self, ticker: str, start_date: str, end_date: str) -> dict | None:
+    def run(self, ticker: str, start_date: str, end_date: str,
+            strategy_type: str = None, strategy_params: dict = None,
+            save_label: str = None) -> dict | None:
         stock_id = self._get_stock_id(ticker)
         if stock_id is None:
             return None
@@ -309,7 +324,13 @@ class BacktestEngine:
 
         buy_hold_metrics = self._calc_buy_hold_metrics(df)
 
-        signal_df = self._generate_dynamic_signals(df)
+        if strategy_type is None:
+            signal_df = self._generate_dynamic_signals(df)
+            save_type = 'DYNAMIC'
+        else:
+            signal_df = self._generate_static_signals(df, strategy_type, strategy_params)
+            save_type = save_label or strategy_type
+
         if signal_df.empty:
             return None
 
@@ -322,8 +343,8 @@ class BacktestEngine:
         if metrics is None:
             return None
 
-        self._save_result(stock_id, 'DYNAMIC', start_date, end_date, metrics)
-
+        self._save_result(stock_id, save_type, start_date, end_date, metrics)
+        
         # ✅ None 안전하게 처리 — 값 없으면 "N/A"로 표시
         def fmt_pct(v):
             return f"{v*100:.1f}%" if v is not None else "N/A"
