@@ -72,7 +72,10 @@ score = cum_return_30d × 10 + volume_spike_freq
 
 **적용 전략**: `SmallCapMomentumStrategy`
 
-**해당 종목 유형**: 성장주, 소형주, 단기 급등주
+**해당 종목 유형**: 성장주, 소형주, 단기 
+
+> ⚠️ 백테스트 결과(평균수익률 6.35%, 샤프 -0.043)가 DYNAMIC/TURTLE 대비 유의미하게 저조하여
+> daily_screener.py 스캔 대상에서 제외한다. 분류 자체는 유지하되 스캔만 스킵한다.
 
 ---
 

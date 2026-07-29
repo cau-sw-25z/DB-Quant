@@ -170,8 +170,19 @@ def main():
         else:
             fail += 1
     print(f"TURTLE 완료! 성공 {success}개 / 실패·제외 {fail}개\n")
+    
+    print("=== MOMENTUM 백테스트 ===")
+    success, fail = 0, 0
+    for ticker in tickers:
+        result = bt.run(ticker, START, END, strategy_type="MOMENTUM")
+        if result:
+            success += 1
+        else:
+            fail += 1
+    print(f"MOMENTUM 완료! 성공 {success}개 / 실패·제외 {fail}개\n")
 
     print_stats()
+    
 
 
 if __name__ == "__main__":

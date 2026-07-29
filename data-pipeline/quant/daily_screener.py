@@ -33,7 +33,7 @@ class DailyScreener:
             SELECT s.ticker, s.name, sc.strategy_type
             FROM stocks s
             JOIN stock_classification sc ON sc.stock_id = s.id
-            WHERE sc.strategy_type NOT IN ('UNCLASSIFIED', 'VOLATILITY_BREAKOUT')
+            WHERE sc.strategy_type NOT IN ('UNCLASSIFIED', 'VOLATILITY_BREAKOUT', 'MOMENTUM')
         """)
         with engine.connect() as conn:
             universe_df = pd.read_sql(universe_query, conn)
