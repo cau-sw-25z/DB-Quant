@@ -3,10 +3,13 @@ from .base_strategy import BaseStrategy
 
 
 class TrendFollowingStrategy(BaseStrategy):
-    def __init__(self, df, breakout_window=20, atr_multiplier=1.5):
+    def __init__(self, df, breakout_window=20, atr_multiplier=1.5,
+                 adx_threshold=25, vol_multiplier=1.5):
         super().__init__(df)
         self.breakout_window = breakout_window
         self.atr_multiplier = atr_multiplier
+        self.adx_threshold = adx_threshold
+        self.vol_multiplier = vol_multiplier
 
     def add_indicators(self):
         self.df['Recent_High'] = self.df['high_price'].rolling(self.breakout_window).max().shift(1)
@@ -43,7 +46,7 @@ class TrendFollowingStrategy(BaseStrategy):
             if self.df.loc[i, 'Signal'] == -2.0:
                 continue
 
-            # 우선순위 2: 기본 청산 — ma_20 붕괴 (원복)
+            # 우선순위 2: 기본 청산 — ma_20 붕괴
             if close < ma_20:
                 self.df.loc[i, 'Signal'] = -1.0
 
@@ -56,8 +59,8 @@ class TrendFollowingStrategy(BaseStrategy):
                 close > ma_60
                 and ma_20 > ma_60
                 and close > rec_high
-                and not pd.isna(adx) and adx >= 25
-                and not pd.isna(vol_ma) and vol > vol_ma * 1.5
+                and not pd.isna(adx) and adx >= self.adx_threshold
+                and not pd.isna(vol_ma) and vol > vol_ma * self.vol_multiplier
             ):
                 self.df.loc[i, 'Signal'] = 1.0
 
