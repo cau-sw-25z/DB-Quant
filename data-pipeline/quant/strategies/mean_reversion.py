@@ -3,8 +3,9 @@ from .base_strategy import BaseStrategy
 
 
 class MeanReversionStrategy(BaseStrategy):
-    def __init__(self, df):
+    def __init__(self, df, rsi_threshold=35):
         super().__init__(df)
+        self.rsi_threshold = rsi_threshold
 
     def add_indicators(self):
         pass
@@ -38,8 +39,7 @@ class MeanReversionStrategy(BaseStrategy):
                 self.df.loc[i, 'Signal'] = -0.5
 
             # 우선순위 4: 매수 — 하단밴드 이탈 + 과매도
-            # ✅ 수정: rsi < 40 → rsi < 35 (진입 조건 더 선별적으로)
-            elif close < bb_lower and rsi < 35:
+            elif close < bb_lower and rsi < self.rsi_threshold:
                 self.df.loc[i, 'Signal'] = 1.0
 
         return self.df
