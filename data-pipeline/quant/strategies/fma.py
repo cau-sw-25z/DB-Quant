@@ -3,8 +3,8 @@ from .base_strategy import BaseStrategy
 
 # 고정 이동평균 전략
 class FMAStrategy(BaseStrategy):
-    def __init__(self, short_window=20, long_window=60, hold_days=10):
-        super().__init__()
+    def __init__(self, df, short_window=20, long_window=60, hold_days=10):
+        super().__init__(df)
         self.short_window = short_window
         self.long_window = long_window
         self.hold_days = hold_days
@@ -16,7 +16,9 @@ class FMAStrategy(BaseStrategy):
     def generate_signals(self):
         self.add_indicators()
         self.df = self.df.reset_index(drop=True)
-        self.df['signal'] = 0.0
+        self.df['Signal'] = 0.0
+        
+        exit_row = None
         
         for i in range(1, len(self.df)):
             s_today = self.df.loc[i, 'FMA_short']
@@ -29,12 +31,12 @@ class FMAStrategy(BaseStrategy):
             
             # 청산 예정일에 도달 -> 기계적 청산
             if exit_row is not None and i >= exit_row:
-                self.df.loc[i, 'signal'] = -1.0
+                self.df.loc[i, 'Signal'] = -1.0
                 exit_row = None
                 
             elif exit_row is None:
                 if s_prev < l_prev and s_today >= l_today:
-                    self.df.loc[i, 'signal'] = 1.0
+                    self.df.loc[i, 'Signal'] = 1.0
                     exit_row = i + self.hold_days
             
         self.df = self.df.drop(columns=['FMA_short', 'FMA_long'])

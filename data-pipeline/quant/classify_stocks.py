@@ -24,13 +24,13 @@ def load_latest_adx() -> pd.DataFrame:
         ) latest ON ti.stock_id = latest.stock_id AND ti.date = latest.max_date
         JOIN stocks s ON ti.stock_id = s.id
         WHERE s.name NOT LIKE '%스팩%'
-          AND s.name NOT LIKE '%리츠%'
-          AND s.name NOT LIKE '%우'
-          AND s.name NOT LIKE '%1우'
-          AND s.name NOT LIKE '%2우'
-          AND s.name NOT LIKE '%3우'
-          AND s.name NOT LIKE '%우B'
-          AND s.name NOT LIKE '%우C'
+        AND s.name NOT LIKE '%리츠%'
+        AND s.name NOT LIKE '%우'
+        AND s.name NOT LIKE '%1우'
+        AND s.name NOT LIKE '%2우'
+        AND s.name NOT LIKE '%3우'
+        AND s.name NOT LIKE '%우B'
+        AND s.name NOT LIKE '%우C'
     """)
 
     with engine.connect() as conn:
