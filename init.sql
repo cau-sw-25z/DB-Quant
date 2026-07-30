@@ -111,9 +111,10 @@ CREATE TABLE IF NOT EXISTS `quant_db`.`trades` (
 -- stock_metrics   (calculate_returns.py 결과)
 -- -----------------------------------------------------
 CREATE TABLE IF NOT EXISTS `quant_db`.`stock_metrics` (
-  `id`                BIGINT NOT NULL AUTO_INCREMENT,
-  `stock_id`          BIGINT NOT NULL,
-  `date`              DATE   NOT NULL,
+  `id`                BIGINT       NOT NULL AUTO_INCREMENT,
+  `stock_id`          BIGINT       NOT NULL,
+  `ticker`            VARCHAR(50)  NOT NULL,   -- 비정규화 유지 (조회 편의)
+  `date`              DATE         NOT NULL,
   `daily_return`      DOUBLE,
   `cum_return_30d`    DOUBLE,
   `cum_return_90d`    DOUBLE,
@@ -132,8 +133,9 @@ CREATE TABLE IF NOT EXISTS `quant_db`.`stock_metrics` (
 CREATE TABLE IF NOT EXISTS `quant_db`.`stock_classification` (
   `id`            BIGINT       NOT NULL AUTO_INCREMENT,
   `stock_id`      BIGINT       NOT NULL,
+  `ticker`        VARCHAR(50)  NOT NULL,   -- 비정규화 유지 (조회 편의)
   `strategy_type` VARCHAR(50)  NOT NULL,
-  -- TREND_FOLLOWING / MEAN_REVERSION / MOMENTUM / LOW_VOLATILITY / VOLATILITY_BREAKOUT / UNCLASSIFIED
+  -- TREND_FOLLOWING / MEAN_REVERSION
   `score`         DECIMAL(5,2) NOT NULL,
   `classified_at` DATETIME     NOT NULL,
   PRIMARY KEY (`id`),
@@ -215,22 +217,22 @@ CREATE TABLE IF NOT EXISTS `quant_db`.`portfolio_weights` (
 -- backtest_results
 -- -----------------------------------------------------
 CREATE TABLE IF NOT EXISTS `quant_db`.`backtest_results` (
-  `id`            BIGINT      NOT NULL AUTO_INCREMENT,
-  `stock_id`      BIGINT      NOT NULL,
-  `strategy_type` VARCHAR(50) NOT NULL,
-  `start_date`    DATE        NOT NULL,
-  `end_date`      DATE        NOT NULL,
-  `total_return`  DOUBLE      NOT NULL,
+  `id`               BIGINT      NOT NULL AUTO_INCREMENT,
+  `stock_id`         BIGINT      NOT NULL,
+  `strategy_type`    VARCHAR(50) NOT NULL,
+  `start_date`       DATE        NOT NULL,
+  `end_date`         DATE        NOT NULL,
+  `total_return`     DOUBLE      NOT NULL,
   `buy_hold_return`  DOUBLE,
   `buy_hold_mdd`     DOUBLE,
   `buy_hold_sharpe`  DOUBLE,
   `excess_return`    DOUBLE,
-  `annual_return` DOUBLE      NOT NULL,
-  `mdd`           DOUBLE      NOT NULL,
-  `sharpe_ratio`  DOUBLE,
-  `win_rate`      DOUBLE,
-  `trade_count`   INT         NOT NULL,
-  `created_at`    DATETIME    NOT NULL,
+  `annual_return`    DOUBLE      NOT NULL,
+  `mdd`              DOUBLE      NOT NULL,
+  `sharpe_ratio`     DOUBLE,
+  `win_rate`         DOUBLE,
+  `trade_count`      INT         NOT NULL,
+  `created_at`       DATETIME    NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE INDEX `idx_backtest_stock` (`stock_id`, `strategy_type`, `start_date`, `end_date`),
   CONSTRAINT `fk_backtest_results_stocks`

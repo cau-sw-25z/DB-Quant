@@ -61,16 +61,19 @@ def classify(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def save(df: pd.DataFrame):
-    """stock_classification 테이블 전체 덮어쓰기"""
+    """stock_classification 데이터만 갈아끼우기 (스키마는 유지)"""
     print("💾 [3/3] stock_classification 테이블 저장 중...")
 
-    result_df = df[['stock_id', 'strategy_type', 'score', 'classified_at']]
-    result_df.to_sql(
-        name='stock_classification',
-        con=engine,
-        if_exists='append',
-        index=False
-    )
+    result_df = df[['stock_id', 'ticker', 'strategy_type', 'score', 'classified_at']]
+
+    with engine.begin() as conn:
+        conn.execute(text("DELETE FROM stock_classification"))
+        result_df.to_sql(
+            name='stock_classification',
+            con=conn,
+            if_exists='append',   # 테이블은 유지, 데이터만 append
+            index=False
+        )
     print(f"✅ 저장 완료: {len(result_df)}개 종목")
 
 
