@@ -23,7 +23,7 @@ def calculate_metrics():
     if last_date is None:
         print("   → stock_metrics 없음. 전체 계산 시작...")
         query = text("""
-        SELECT p.stock_id, s.name, p.date, p.close_price
+        SELECT p.stock_id, s.ticker, s.name, p.date, p.close_price
         FROM price_histories p
         JOIN stocks s ON p.stock_id = s.id
         ORDER BY p.stock_id, p.date
@@ -32,9 +32,8 @@ def calculate_metrics():
     else:
         last_date_str = str(last_date)[:10]
         print(f"   → 마지막 계산일: {last_date_str}. 증분 업데이트 시작...")
-        
         query = text(f"""
-        SELECT p.stock_id, s.name, p.date, p.close_price
+        SELECT p.stock_id, s.ticker, s.name, p.date, p.close_price
         FROM price_histories p
         JOIN stocks s ON p.stock_id = s.id
         WHERE p.date >= DATE_SUB('{last_date_str}', INTERVAL 380 DAY)
@@ -80,7 +79,7 @@ def calculate_metrics():
     df['sharpe_ratio'] = (annual_return - risk_free_rate) / df['annual_volatility']
     df = df.replace([np.inf, -np.inf], np.nan)
 
-    result_df = df[['stock_id', 'date', 'daily_return', 
+    result_df = df[['stock_id', 'ticker', 'date', 'daily_return', 
                     'cum_return_30d', 'cum_return_90d', 'cum_return_1y', 
                     'annual_volatility', 'sharpe_ratio']]
 
