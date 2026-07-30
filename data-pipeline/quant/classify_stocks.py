@@ -15,7 +15,7 @@ def load_latest_adx() -> pd.DataFrame:
     print("📊 [1/3] 최신 ADX 데이터 불러오는 중...")
 
     query = text("""
-        SELECT ti.stock_id, ti.adx_14
+        SELECT ti.stock_id, s.ticker, ti.adx_14
         FROM technical_indicators ti
         INNER JOIN (
             SELECT stock_id, MAX(date) AS max_date
