@@ -203,7 +203,7 @@ CREATE TABLE IF NOT EXISTS `quant_db`.`portfolio_weights` (
   `id`                BIGINT        NOT NULL AUTO_INCREMENT,
   `portfolio_item_id` BIGINT        NOT NULL,
   `weight`            DECIMAL(10,6) NOT NULL,   -- 비중 합계 = 1.0
-  `risk_level`        INT           NOT NULL,   -- 1(안정형) ~ 5(공격형)
+  `risk_level`        INT           NOT NULL,   -- 1(공격형) ~ 5(안정형)
   `calculated_at`     DATETIME      NOT NULL,
   PRIMARY KEY (`id`),
   INDEX `idx_portfolio_weights_item` (`portfolio_item_id` ASC),

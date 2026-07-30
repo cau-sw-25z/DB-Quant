@@ -68,7 +68,7 @@ def save(df: pd.DataFrame):
     result_df.to_sql(
         name='stock_classification',
         con=engine,
-        if_exists='replace',
+        if_exists='append',
         index=False
     )
     print(f"✅ 저장 완료: {len(result_df)}개 종목")
